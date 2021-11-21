@@ -40,14 +40,6 @@ contract Larp is
     uint256 private constant MAX_PRIVATE_CLAIM_TOKEN_ID = 10;
     uint256 private constant MAX_CLAIM_TOKEN_ID = 300;
 
-    struct ClaimedToken {
-        address account;
-        uint256 tokenId;
-        bool claimed;
-    }
-    // Accounts that have claimed tokens
-    mapping(address => ClaimedToken) claimedTokenAccounts;
-
     // Status of public claim
     bool public publicClaim;
 
@@ -75,48 +67,60 @@ contract Larp is
     }
 
     // Assigns minter role
-    function assignMinterRole(address _account, string memory _role) internal {
+    function assignMinterRole(address _account, string memory _role)
+        internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
         require(_chosenRole == MINTER_ROLE, "The role must be minter");
         // Checks if addresses already have this role
         require(
-            hasRole(_chosenRole, _account) == false,
+            !hasRole(_chosenRole, _account),
             "This address has already been assigned this role"
         );
         grantRole(_chosenRole, _account);
     }
 
     // Removes minter role
-    function removeMinterRole(address _account, string memory _role) internal {
+    function removeMinterRole(address _account, string memory _role)
+        internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
         require(_chosenRole == MINTER_ROLE, "The role must be minter");
         // Checks if addresses don't have this role
         require(
-            hasRole(_chosenRole, _account) == true,
+            hasRole(_chosenRole, _account),
             "This address does not have this role"
         );
         revokeRole(_chosenRole, _account);
     }
 
     // Assigns pauser role
-    function assignPauserRole(address _account, string memory _role) internal {
+    function assignPauserRole(address _account, string memory _role)
+        internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
         require(_chosenRole == PAUSER_ROLE, "The role must be pauser");
         // Checks if addresses already have this role
         require(
-            hasRole(_chosenRole, _account) == false,
+            !hasRole(_chosenRole, _account),
             "This address has already been assigned this role"
         );
         grantRole(_chosenRole, _account);
     }
 
     // Removes pauser role
-    function removePauserRole(address _account, string memory _role) internal {
+    function removePauserRole(address _account, string memory _role)
+        internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
         require(_chosenRole == PAUSER_ROLE, "The role must be pauser");
         // Checks if addresses don't have this role
         require(
-            hasRole(_chosenRole, _account) == true,
+            hasRole(_chosenRole, _account),
             "This address does not have this role"
         );
         revokeRole(_chosenRole, _account);
@@ -125,6 +129,7 @@ contract Larp is
     // Assigns preferred minter role
     function assignPreferredMinterRole(address _account, string memory _role)
         internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
         bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
         require(
@@ -133,7 +138,7 @@ contract Larp is
         );
         // Checks if addresses already have this role
         require(
-            hasRole(_chosenRole, _account) == false,
+            !hasRole(_chosenRole, _account),
             "This address has already been assigned this role"
         );
         grantRole(_chosenRole, _account);
@@ -142,6 +147,7 @@ contract Larp is
     // Removes preferred minter role
     function removePreferredMinterRole(address _account, string memory _role)
         internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
     {
         bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
         require(
@@ -150,7 +156,7 @@ contract Larp is
         );
         // Checks if addresses don't have this role
         require(
-            hasRole(_chosenRole, _account) == true,
+            hasRole(_chosenRole, _account),
             "This address does not have this role"
         );
         revokeRole(_chosenRole, _account);
@@ -169,7 +175,7 @@ contract Larp is
         for (uint256 i = 0; i < _accounts.length; i++) {
             // Checks if addresses already have this role
             require(
-                hasRole(_chosenRole, _accounts[i]) == false,
+                !hasRole(_chosenRole, _accounts[i]),
                 "This address has already been assigned this role"
             );
             grantRole(_chosenRole, _accounts[i]);
@@ -189,7 +195,7 @@ contract Larp is
         for (uint256 i = 0; i < _accounts.length; i++) {
             // Checks if addresses don't have this role
             require(
-                hasRole(_chosenRole, _accounts[i]) == true,
+                hasRole(_chosenRole, _accounts[i]),
                 "This address does not have this role"
             );
             revokeRole(_chosenRole, _accounts[i]);
@@ -253,15 +259,14 @@ contract Larp is
         nonReentrant
     {
         address owner = _msgSender();
-        uint256 totalMinted = _totalPublicMinted.current();
-
         require(
-            claimedTokenAccounts[owner].claimed == false,
-            "This address has already claimed a token"
+            balanceOf(owner) == 0,
+            "Only one token can be minted per address"
         );
+
+        uint256 totalMinted = _totalPublicMinted.current();
         require(publicClaim == true, "Public mint is not active");
         require(totalMinted < publicTokenIds.length, "Public mint has ended");
-        claimedTokenAccounts[owner] = ClaimedToken(owner, totalMinted, true);
         _mintToken(totalMinted, tokenUri, owner);
         _totalPublicMinted.increment();
     }
@@ -274,14 +279,18 @@ contract Larp is
         nonReentrant
     {
         address owner = _msgSender();
+        require(
+            balanceOf(owner) == 0,
+            "Only one token can be minted per address"
+        );
+
         uint256 totalMinted = _totalPrivateMinted.current();
         require(
-            claimedTokenAccounts[owner].claimed == false,
-            "This address has already claimed a token"
+            hasRole(PREFERRED_MINTER_ROLE, owner),
+            "This address is not a preferred minter"
         );
         require(privateClaim == true, "Private mint is not active");
         require(totalMinted < privateTokenIds.length, "Private mint has ended");
-        claimedTokenAccounts[owner] = ClaimedToken(owner, totalMinted, true);
         _mintToken(totalMinted, tokenUri, owner);
         _totalPrivateMinted.increment();
     }
