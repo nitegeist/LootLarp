@@ -26,10 +26,8 @@ contract Larp is
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PREFERRED_MINTER_ROLE =
         keccak256("PREFERRED_MINTER_ROLE");
-    Counters.Counter private _tokensMinted;
-    Counters.Counter private _tokensClaimed;
-    Counters.Counter private _tokensPublicMinted;
-    Counters.Counter private _tokensPrivateMinted;
+    Counters.Counter private _totalPublicMinted;
+    Counters.Counter private _totalPrivateMinted;
 
     uint256 listingPrice = 250000000000000000; // 0.25 ETH
 
@@ -39,25 +37,30 @@ contract Larp is
     // Token ID constants
     uint256 private constant MAX_ADDITIONAL_CLAIM_TOKEN_ID = 100;
     uint256 private constant MAX_PUBLIC_CLAIM_TOKEN_ID = 290;
-    uint256 private constant MAX_RARE_CLAIM_TOKEN_ID = 10;
+    uint256 private constant MAX_PRIVATE_CLAIM_TOKEN_ID = 10;
     uint256 private constant MAX_CLAIM_TOKEN_ID = 300;
 
-    // Accounts that have claimed
-    mapping(address => mapping(uint256 => bool)) claimedTokenAccounts;
+    struct ClaimedToken {
+        address account;
+        uint256 tokenId;
+        bool claimed;
+    }
+    // Accounts that have claimed tokens
+    mapping(address => ClaimedToken) claimedTokenAccounts;
 
     // Roles mapping
-    mapping(address => mapping(uint256 => bool)) accountRoles;
+    mapping(address => mapping(bytes32 => bool)) accountRoles;
 
-    // Status of public sale
-    bool public publicSale;
+    // Status of public claim
+    bool public publicClaim;
 
-    // Randomized array of token ids for public mint
+    // Array of token ids for public mint
     uint256[] publicTokenIds;
 
-    // Status of private sale
-    bool public privateSale;
+    // Status of private claim
+    bool public privateClaim;
 
-    // Randomized array of token ids for private mint
+    // Array of token ids for private mint
     uint256[] privateTokenIds;
 
     constructor() ERC721("Larp", "LARP") {
@@ -74,69 +77,196 @@ contract Larp is
         _unpause();
     }
 
-    // Assigns role
-    function assignRole(address _account, uint256 role) internal {
-        accountRoles[_account][role] = true;
+    // Assigns minter role
+    function assignMinterRole(address _account, string memory _role) internal {
+        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+        require(_chosenRole == MINTER_ROLE, "The role must be minter");
+        // Checks if addresses already have this role
+        require(
+            hasRole(_chosenRole, _account) == false,
+            "This address has already been assigned this role"
+        );
+        grantRole(_chosenRole, _account);
+    }
+
+    // Removes minter role
+    function removeMinterRole(address _account, string memory _role) internal {
+        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+        require(_chosenRole == MINTER_ROLE, "The role must be minter");
+        // Checks if addresses don't have this role
+        require(
+            hasRole(_chosenRole, _account) == true,
+            "This address does not have this role"
+        );
+        revokeRole(_chosenRole, _account);
+    }
+
+    // Assigns pauser role
+    function assignPauserRole(address _account, string memory _role) internal {
+        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+        require(_chosenRole == PAUSER_ROLE, "The role must be pauser");
+        // Checks if addresses already have this role
+        require(
+            hasRole(_chosenRole, _account) == false,
+            "This address has already been assigned this role"
+        );
+        grantRole(_chosenRole, _account);
+    }
+
+    // Removes pauser role
+    function removePauserRole(address _account, string memory _role) internal {
+        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+        require(_chosenRole == PAUSER_ROLE, "The role must be pauser");
+        // Checks if addresses don't have this role
+        require(
+            hasRole(_chosenRole, _account) == true,
+            "This address does not have this role"
+        );
+        revokeRole(_chosenRole, _account);
+    }
+
+    // Assigns preferred minter role
+    function assignPreferredMinterRole(address _account, string memory _role)
+        internal
+    {
+        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+        require(
+            _chosenRole == PREFERRED_MINTER_ROLE,
+            "The role must be preferred minter"
+        );
+        // Checks if addresses already have this role
+        require(
+            hasRole(_chosenRole, _account) == false,
+            "This address has already been assigned this role"
+        );
+        grantRole(_chosenRole, _account);
+    }
+
+    // Removes preferred minter role
+    function removePreferredMinterRole(address _account, string memory _role)
+        internal
+    {
+        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+        require(
+            _chosenRole == PREFERRED_MINTER_ROLE,
+            "The role must be preferred minter"
+        );
+        // Checks if addresses don't have this role
+        require(
+            hasRole(_chosenRole, _account) == true,
+            "This address does not have this role"
+        );
+        revokeRole(_chosenRole, _account);
     }
 
     // Batch assigns roles
-    function batchAssignRole(address[] memory _accounts, uint256 role)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function batchAssignPreferredMinterRole(
+        address[] memory _accounts,
+        string memory _role
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+        require(
+            _chosenRole == PREFERRED_MINTER_ROLE,
+            "The role must be preferred minter"
+        );
         for (uint256 i = 0; i < _accounts.length; i++) {
-            accountRoles[_accounts[i]][role] = true;
+            // Checks if addresses already have this role
+            require(
+                hasRole(_chosenRole, _accounts[i]) == false,
+                "This address has already been assigned this role"
+            );
+            grantRole(_chosenRole, _accounts[i]);
         }
-    }
-
-    // Removes role
-    function removeRole(address _account, uint256 role) internal {
-        accountRoles[_account][role] = false;
     }
 
     // Batch removes roles
-    function batchRemoveRole(address[] memory _accounts, uint256 role)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
+    function batchRemovePreferredMinterRole(
+        address[] memory _accounts,
+        string memory _role
+    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+        require(
+            _chosenRole == PREFERRED_MINTER_ROLE,
+            "The role must be preferred minter"
+        );
         for (uint256 i = 0; i < _accounts.length; i++) {
-            accountRoles[_accounts[i]][role] = false;
+            // Checks if addresses don't have this role
+            require(
+                hasRole(_chosenRole, _accounts[i]) == true,
+                "This address does not have this role"
+            );
+            revokeRole(_chosenRole, _accounts[i]);
         }
     }
 
-    // Check if account has role
-    function accountHasRole(address account, uint256 role)
+    // Checks if an account has a role
+    function accountHasRole(address _account, string memory _role)
         internal
         view
-        returns (bool)
     {
-        return accountRoles[account][role];
+        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+        _checkRole(_chosenRole, _account);
     }
 
-    // Get listing price
+    // Gets listing price
     function getListingPrice() public view returns (uint256) {
         return listingPrice;
     }
 
-    // Set listing price
-    function setListingPrice(uint256 _newPrice)
-        public
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        listingPrice = _newPrice;
+    // Sets listing price in wei
+    function setListingPrice(uint256 _wei) public onlyRole(DEFAULT_ADMIN_ROLE) {
+        listingPrice = _wei;
     }
 
-    //Public mint function
+    // Sets an array of public token ids
+    // Requires public ids not to exceed the max amount of public ids that can be generated
+    function setPublicTokenIds(uint256[] memory _tokenIds)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(
+            _tokenIds.length <= MAX_PUBLIC_CLAIM_TOKEN_ID,
+            "Token amount exceeds public token limit"
+        );
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            publicTokenIds.push(_tokenIds[i]);
+        }
+    }
+
+    // Sets an array of private token ids
+    // Requires private ids not to exceed the max amount of private ids that can be generated
+    function setPrivateTokenIds(uint256[] memory _tokenIds)
+        external
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(
+            _tokenIds.length <= MAX_PRIVATE_CLAIM_TOKEN_ID,
+            "Token amount exceeds private token limit"
+        );
+        for (uint256 i = 0; i < _tokenIds.length; i++) {
+            privateTokenIds.push(_tokenIds[i]);
+        }
+    }
+
+    // Public mint function
     function publicMint(string memory tokenUri)
         public
         payable
         onlyRole(MINTER_ROLE)
         nonReentrant
     {
-        require(publicSale == true, "Public sale is not active");
-        uint256 tokenId = _tokensPublicMinted.current();
-        claimedTokenAccounts[msg.sender][tokenId] = true;
-        _mintToken(tokenId, tokenUri, msg.sender);
+        address owner = _msgSender();
+        uint256 totalMinted = _totalPublicMinted.current();
+
+        require(
+            claimedTokenAccounts[owner].claimed == false,
+            "This address has already claimed a token"
+        );
+        require(publicClaim == true, "Public mint is not active");
+        require(totalMinted < publicTokenIds.length, "Public mint has ended");
+        claimedTokenAccounts[owner] = ClaimedToken(owner, totalMinted, true);
+        _mintToken(totalMinted, tokenUri, owner);
+        _totalPublicMinted.increment();
     }
 
     // Private mint function
@@ -146,10 +276,17 @@ contract Larp is
         onlyRole(PREFERRED_MINTER_ROLE)
         nonReentrant
     {
-        require(privateSale == true, "Private sale is not active");
-        uint256 tokenId = _tokensPrivateMinted.current();
-        claimedTokenAccounts[msg.sender][tokenId] = true;
-        _mintToken(tokenId, tokenUri, msg.sender);
+        address owner = _msgSender();
+        uint256 totalMinted = _totalPrivateMinted.current();
+        require(
+            claimedTokenAccounts[owner].claimed == false,
+            "This address has already claimed a token"
+        );
+        require(privateClaim == true, "Private mint is not active");
+        require(totalMinted < privateTokenIds.length, "Private mint has ended");
+        claimedTokenAccounts[owner] = ClaimedToken(owner, totalMinted, true);
+        _mintToken(totalMinted, tokenUri, owner);
+        _totalPrivateMinted.increment();
     }
 
     function _mintToken(
@@ -205,6 +342,8 @@ contract Larp is
         override(ERC721, AccessControl)
         returns (bool)
     {
-        return super.supportsInterface(interfaceId);
+        return
+            interfaceId == INTERFACE_ID_ERC2981 ||
+            super.supportsInterface(interfaceId);
     }
 }
