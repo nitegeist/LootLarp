@@ -74,13 +74,13 @@ contract Larp is
         _unpause();
     }
 
-    // Add roles
-    function addRole(address account, uint256 role) internal {
-        accountRoles[account][role] = true;
+    // Assigns role
+    function assignRole(address _account, uint256 role) internal {
+        accountRoles[_account][role] = true;
     }
 
-    // Batch adds preferred minter role
-    function batchAddRole(address[] memory _accounts, uint256 role)
+    // Batch assigns roles
+    function batchAssignRole(address[] memory _accounts, uint256 role)
         public
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
@@ -89,9 +89,19 @@ contract Larp is
         }
     }
 
-    // Remove roles
-    function removeRole(address account, uint256 role) internal {
-        accountRoles[account][role] = false;
+    // Removes role
+    function removeRole(address _account, uint256 role) internal {
+        accountRoles[_account][role] = false;
+    }
+
+    // Batch removes roles
+    function batchRemoveRole(address[] memory _accounts, uint256 role)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            accountRoles[_accounts[i]][role] = false;
+        }
     }
 
     // Check if account has role
