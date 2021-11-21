@@ -38,7 +38,7 @@ contract Larp is
     uint256 private constant MAX_ADDITIONAL_CLAIM_TOKEN_ID = 100;
     uint256 private constant MAX_PUBLIC_CLAIM_TOKEN_ID = 290;
     uint256 private constant MAX_PRIVATE_CLAIM_TOKEN_ID = 10;
-    uint256 private constant MAX_CLAIM_TOKEN_ID = 300;
+    uint256 private constant MAX_CLAIM_TOKEN_ID = 400;
 
     // Status of public claim
     bool public publicClaim;
@@ -231,12 +231,15 @@ contract Larp is
     {
         address owner = _msgSender();
         require(
+            hasRole(MINTER_ROLE, owner),
+            "This address is not a preferred minter"
+        );
+        require(
             balanceOf(owner) == 0,
             "Only one token can be minted per address"
         );
-
-        uint256 totalMinted = _totalPublicMinted.current();
         require(publicClaim == true, "Public mint is not active");
+        uint256 totalMinted = _totalPublicMinted.current();
         require(totalMinted < publicTokenIds.length, "Public mint has ended");
         _mintToken(totalMinted, tokenUri, owner);
         _totalPublicMinted.increment();
@@ -251,16 +254,15 @@ contract Larp is
     {
         address owner = _msgSender();
         require(
-            balanceOf(owner) == 0,
-            "Only one token can be minted per address"
-        );
-
-        uint256 totalMinted = _totalPrivateMinted.current();
-        require(
             hasRole(PREFERRED_MINTER_ROLE, owner),
             "This address is not a preferred minter"
         );
+        require(
+            balanceOf(owner) == 0,
+            "Only one token can be minted per address"
+        );
         require(privateClaim == true, "Private mint is not active");
+        uint256 totalMinted = _totalPrivateMinted.current();
         require(totalMinted < privateTokenIds.length, "Private mint has ended");
         _mintToken(totalMinted, tokenUri, owner);
         _totalPrivateMinted.increment();
