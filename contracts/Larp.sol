@@ -67,14 +67,10 @@ contract Larp is
     }
 
     // Grants minter role
-    function grantMinterRole(address _account, string memory _role)
+    function grantMinterRole(address _account)
         internal
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(
-            keccak256(abi.encodePacked(_role)) == MINTER_ROLE,
-            "The role must be minter"
-        );
         // Checks if addresses already have this role
         require(
             !hasRole(MINTER_ROLE, _account),
@@ -84,15 +80,11 @@ contract Larp is
     }
 
     // Revokes minter role
-    function revokeMinterRole(address _account, string memory _role)
+    function revokeMinterRole(address _account)
         internal
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(
-            keccak256(abi.encodePacked(_role)) == MINTER_ROLE,
-            "The role must be minter"
-        );
-        // Checks if addresses don't have this role
+        // Checks if address doesn't have this role
         require(
             hasRole(MINTER_ROLE, _account),
             "This address does not have this role"
@@ -101,15 +93,11 @@ contract Larp is
     }
 
     // Grants pauser role
-    function grantPauserRole(address _account, string memory _role)
+    function grantPauserRole(address _account)
         internal
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(
-            keccak256(abi.encodePacked(_role)) == PAUSER_ROLE,
-            "The role must be pauser"
-        );
-        // Checks if addresses already have this role
+        // Checks if address already has this role
         require(
             !hasRole(PAUSER_ROLE, _account),
             "This address has already been assigned this role"
@@ -118,15 +106,11 @@ contract Larp is
     }
 
     // Revokes pauser role
-    function revokePauserRole(address _account, string memory _role)
+    function revokePauserRole(address _account)
         internal
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        require(
-            keccak256(abi.encodePacked(_role)) == PAUSER_ROLE,
-            "The role must be pauser"
-        );
-        // Checks if addresses don't have this role
+        // Checks if address doesn't have this role
         require(
             hasRole(PAUSER_ROLE, _account),
             "This address does not have this role"
@@ -139,7 +123,7 @@ contract Larp is
         internal
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        // Checks if addresses already have this role
+        // Checks if address already has this role
         require(
             !hasRole(PREFERRED_MINTER_ROLE, _account),
             "This address has already been assigned this role"
@@ -152,7 +136,7 @@ contract Larp is
         internal
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        // Checks if addresses don't have this role
+        // Checks if address doesn't have this role
         require(
             hasRole(PREFERRED_MINTER_ROLE, _account),
             "This address does not have this role"
