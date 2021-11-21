@@ -53,9 +53,9 @@ contract Larp is
     uint256[] privateTokenIds;
 
     constructor() ERC721("Larp", "LARP") {
+        // Grant the deployer of the contract default admin role
+        // This role can grant and revoke other roles
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
-        _setupRole(PAUSER_ROLE, msg.sender);
-        _setupRole(MINTER_ROLE, msg.sender);
     }
 
     function pause() public onlyRole(PAUSER_ROLE) {
@@ -66,139 +66,127 @@ contract Larp is
         _unpause();
     }
 
-    // Assigns minter role
-    function assignMinterRole(address _account, string memory _role)
+    // Grants minter role
+    function grantMinterRole(address _account, string memory _role)
         internal
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
-        require(_chosenRole == MINTER_ROLE, "The role must be minter");
-        // Checks if addresses already have this role
         require(
-            !hasRole(_chosenRole, _account),
-            "This address has already been assigned this role"
-        );
-        grantRole(_chosenRole, _account);
-    }
-
-    // Removes minter role
-    function removeMinterRole(address _account, string memory _role)
-        internal
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
-        require(_chosenRole == MINTER_ROLE, "The role must be minter");
-        // Checks if addresses don't have this role
-        require(
-            hasRole(_chosenRole, _account),
-            "This address does not have this role"
-        );
-        revokeRole(_chosenRole, _account);
-    }
-
-    // Assigns pauser role
-    function assignPauserRole(address _account, string memory _role)
-        internal
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
-        require(_chosenRole == PAUSER_ROLE, "The role must be pauser");
-        // Checks if addresses already have this role
-        require(
-            !hasRole(_chosenRole, _account),
-            "This address has already been assigned this role"
-        );
-        grantRole(_chosenRole, _account);
-    }
-
-    // Removes pauser role
-    function removePauserRole(address _account, string memory _role)
-        internal
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
-        require(_chosenRole == PAUSER_ROLE, "The role must be pauser");
-        // Checks if addresses don't have this role
-        require(
-            hasRole(_chosenRole, _account),
-            "This address does not have this role"
-        );
-        revokeRole(_chosenRole, _account);
-    }
-
-    // Assigns preferred minter role
-    function assignPreferredMinterRole(address _account, string memory _role)
-        internal
-        onlyRole(DEFAULT_ADMIN_ROLE)
-    {
-        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
-        require(
-            _chosenRole == PREFERRED_MINTER_ROLE,
-            "The role must be preferred minter"
+            keccak256(abi.encodePacked(_role)) == MINTER_ROLE,
+            "The role must be minter"
         );
         // Checks if addresses already have this role
         require(
-            !hasRole(_chosenRole, _account),
+            !hasRole(MINTER_ROLE, _account),
             "This address has already been assigned this role"
         );
-        grantRole(_chosenRole, _account);
+        grantRole(MINTER_ROLE, _account);
     }
 
-    // Removes preferred minter role
-    function removePreferredMinterRole(address _account, string memory _role)
+    // Revokes minter role
+    function revokeMinterRole(address _account, string memory _role)
         internal
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
         require(
-            _chosenRole == PREFERRED_MINTER_ROLE,
-            "The role must be preferred minter"
+            keccak256(abi.encodePacked(_role)) == MINTER_ROLE,
+            "The role must be minter"
         );
         // Checks if addresses don't have this role
         require(
-            hasRole(_chosenRole, _account),
+            hasRole(MINTER_ROLE, _account),
             "This address does not have this role"
         );
-        revokeRole(_chosenRole, _account);
+        revokeRole(MINTER_ROLE, _account);
     }
 
-    // Batch assigns roles
-    function batchAssignPreferredMinterRole(
-        address[] memory _accounts,
-        string memory _role
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
+    // Grants pauser role
+    function grantPauserRole(address _account, string memory _role)
+        internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         require(
-            _chosenRole == PREFERRED_MINTER_ROLE,
-            "The role must be preferred minter"
+            keccak256(abi.encodePacked(_role)) == PAUSER_ROLE,
+            "The role must be pauser"
         );
+        // Checks if addresses already have this role
+        require(
+            !hasRole(PAUSER_ROLE, _account),
+            "This address has already been assigned this role"
+        );
+        grantRole(PAUSER_ROLE, _account);
+    }
+
+    // Revokes pauser role
+    function revokePauserRole(address _account, string memory _role)
+        internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        require(
+            keccak256(abi.encodePacked(_role)) == PAUSER_ROLE,
+            "The role must be pauser"
+        );
+        // Checks if addresses don't have this role
+        require(
+            hasRole(PAUSER_ROLE, _account),
+            "This address does not have this role"
+        );
+        revokeRole(PAUSER_ROLE, _account);
+    }
+
+    // Grants preferred minter role
+    function grantPreferredMinterRole(address _account)
+        internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // Checks if addresses already have this role
+        require(
+            !hasRole(PREFERRED_MINTER_ROLE, _account),
+            "This address has already been assigned this role"
+        );
+        grantRole(PREFERRED_MINTER_ROLE, _account);
+    }
+
+    // Revokes preferred minter role
+    function revokePreferredMinterRole(address _account)
+        internal
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        // Checks if addresses don't have this role
+        require(
+            hasRole(PREFERRED_MINTER_ROLE, _account),
+            "This address does not have this role"
+        );
+        revokeRole(PREFERRED_MINTER_ROLE, _account);
+    }
+
+    // Batch grants roles
+    function batchGrantPreferredMinterRole(address[] memory _accounts)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         for (uint256 i = 0; i < _accounts.length; i++) {
             // Checks if addresses already have this role
             require(
-                !hasRole(_chosenRole, _accounts[i]),
+                !hasRole(PREFERRED_MINTER_ROLE, _accounts[i]),
                 "This address has already been assigned this role"
             );
-            grantRole(_chosenRole, _accounts[i]);
+            grantRole(PREFERRED_MINTER_ROLE, _accounts[i]);
         }
     }
 
-    // Batch removes roles
-    function batchRemovePreferredMinterRole(
-        address[] memory _accounts,
-        string memory _role
-    ) public onlyRole(DEFAULT_ADMIN_ROLE) {
-        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
-        require(
-            _chosenRole == PREFERRED_MINTER_ROLE,
-            "The role must be preferred minter"
-        );
+    // Batch revokes roles
+    function batchRevokePreferredMinterRole(address[] memory _accounts)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
         for (uint256 i = 0; i < _accounts.length; i++) {
             // Checks if addresses don't have this role
             require(
-                hasRole(_chosenRole, _accounts[i]),
+                hasRole(PREFERRED_MINTER_ROLE, _accounts[i]),
                 "This address does not have this role"
             );
-            revokeRole(_chosenRole, _accounts[i]);
+            revokeRole(PREFERRED_MINTER_ROLE, _accounts[i]);
         }
     }
 
@@ -207,8 +195,7 @@ contract Larp is
         internal
         view
     {
-        bytes32 _chosenRole = keccak256(abi.encodePacked(_role));
-        _checkRole(_chosenRole, _account);
+        _checkRole(keccak256(abi.encodePacked(_role)), _account);
     }
 
     // Gets listing price
