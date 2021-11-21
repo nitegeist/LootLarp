@@ -26,7 +26,7 @@ contract Larp is
     bytes32 public constant MINTER_ROLE = keccak256("MINTER_ROLE");
     bytes32 public constant PREFERRED_MINTER_ROLE =
         keccak256("PREFERRED_MINTER_ROLE");
-    Counters.Counter private _tokenIds;
+    Counters.Counter private _tokensMinted;
     Counters.Counter private _tokensClaimed;
     Counters.Counter private _tokensPublicMinted;
     Counters.Counter private _tokensPrivateMinted;
@@ -79,6 +79,16 @@ contract Larp is
         accountRoles[account][role] = true;
     }
 
+    // Batch adds preferred minter role
+    function batchAddRole(address[] memory _accounts, uint256 role)
+        public
+        onlyRole(DEFAULT_ADMIN_ROLE)
+    {
+        for (uint256 i = 0; i < _accounts.length; i++) {
+            accountRoles[_accounts[i]][role] = true;
+        }
+    }
+
     // Remove roles
     function removeRole(address account, uint256 role) internal {
         accountRoles[account][role] = false;
@@ -112,13 +122,11 @@ contract Larp is
         payable
         onlyRole(MINTER_ROLE)
         nonReentrant
-        returns (uint256)
     {
         require(publicSale == true, "Public sale is not active");
-        uint256 tokenMinted = _tokensPublicMinted.current();
-        claimedTokenAccounts[msg.sender][tokenMinted] = true;
-        _mintToken(tokenUri);
-        return tokenMinted;
+        uint256 tokenId = _tokensPublicMinted.current();
+        claimedTokenAccounts[msg.sender][tokenId] = true;
+        _mintToken(tokenId, tokenUri, msg.sender);
     }
 
     // Private mint function
@@ -127,21 +135,20 @@ contract Larp is
         payable
         onlyRole(PREFERRED_MINTER_ROLE)
         nonReentrant
-        returns (uint256)
     {
         require(privateSale == true, "Private sale is not active");
-        uint256 tokenMinted = _tokensPrivateMinted.current();
-        claimedTokenAccounts[msg.sender][tokenMinted] = true;
-        _mintToken(tokenUri);
-        return tokenMinted;
+        uint256 tokenId = _tokensPrivateMinted.current();
+        claimedTokenAccounts[msg.sender][tokenId] = true;
+        _mintToken(tokenId, tokenUri, msg.sender);
     }
 
-    function _mintToken(string memory tokenUri) private returns (uint256) {
-        uint256 newTokenId = _tokenIds.current();
-        _tokenIds.increment();
-        _safeMint(msg.sender, newTokenId);
-        _setTokenURI(newTokenId, tokenUri);
-        return newTokenId;
+    function _mintToken(
+        uint256 tokenId,
+        string memory tokenUri,
+        address _to
+    ) private {
+        _safeMint(_to, tokenId);
+        _setTokenURI(tokenId, tokenUri);
     }
 
     function _beforeTokenTransfer(
