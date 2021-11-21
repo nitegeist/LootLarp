@@ -48,9 +48,6 @@ contract Larp is
     // Accounts that have claimed tokens
     mapping(address => ClaimedToken) claimedTokenAccounts;
 
-    // Roles mapping
-    mapping(address => mapping(bytes32 => bool)) accountRoles;
-
     // Status of public claim
     bool public publicClaim;
 
