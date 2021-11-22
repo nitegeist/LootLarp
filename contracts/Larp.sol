@@ -56,6 +56,8 @@ contract Larp is
         // Grant the deployer of the contract default admin role
         // This role can grant and revoke other roles
         _setupRole(DEFAULT_ADMIN_ROLE, msg.sender);
+        publicClaim = false;
+        privateClaim = false;
     }
 
     function pause() public onlyRole(PAUSER_ROLE) {
@@ -66,12 +68,22 @@ contract Larp is
         _unpause();
     }
 
+    // Toggle public claim
+    function togglePublicClaim() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        publicClaim = !publicClaim;
+    }
+
+    // Toggle private claim
+    function togglePrivateClaim() external onlyRole(DEFAULT_ADMIN_ROLE) {
+        privateClaim = !privateClaim;
+    }
+
     // Grants minter role
     function grantMinterRole(address _account)
         internal
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
-        // Checks if addresses already have this role
+        // Checks if address already has this role
         require(
             !hasRole(MINTER_ROLE, _account),
             "This address has already been assigned this role"
