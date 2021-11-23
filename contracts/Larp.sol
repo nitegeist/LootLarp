@@ -139,7 +139,7 @@ contract Larp is
     }
 
     // Public mint function
-    function publicMint(string memory tokenUri) external payable nonReentrant {
+    function publicMint() external payable nonReentrant {
         require(
             msg.value == listingPrice,
             "Public Mint: Incorrect payment amount"
@@ -149,13 +149,14 @@ contract Larp is
             "Only two tokens can be minted per address"
         );
         require(publicClaim, "Public mint is not active");
-        uint256 totalMinted = _totalMinted.current();
-        _mintToken(totalMinted, tokenUri, _msgSender());
+        uint256 tokenId = _totalMinted.current();
+        string memory tokenUri = string(abi.encodePacked(BASE_URI, tokenId));
+        _mintToken(tokenId, tokenUri, _msgSender());
         _totalMinted.increment();
     }
 
     // Private mint function
-    function privateMint(string memory tokenUri) external payable nonReentrant {
+    function privateMint() external payable nonReentrant {
         require(
             hasRole(PREFERRED_MINTER_ROLE, _msgSender()),
             "Private Mint: Must have preferred minter role to mint"
@@ -172,17 +173,14 @@ contract Larp is
             block.timestamp > startTime && block.timestamp < endTime,
             "Private Mint: Private mint inactive"
         );
-        uint256 totalMinted = _totalMinted.current();
-        _mintToken(totalMinted, tokenUri, _msgSender());
+        uint256 tokenId = _totalMinted.current();
+        string memory tokenUri = string(abi.encodePacked(BASE_URI, tokenId));
+        _mintToken(tokenId, tokenUri, _msgSender());
         _totalMinted.increment();
     }
 
     // Door staff mint function
-    function privateEventRedeem(string memory tokenUri)
-        external
-        payable
-        nonReentrant
-    {
+    function privateEventRedeem() external payable nonReentrant {
         require(
             hasRole(MINTER_ROLE, _msgSender()),
             "Private Redeem: Must have minter role to mint"
@@ -196,8 +194,9 @@ contract Larp is
             "Private Redeem: Only two tokens can be minted per address"
         );
         require(privateRedeem, "Private Redeem: Private redeem is not active");
-        uint256 totalMinted = _totalMinted.current();
-        _mintToken(totalMinted, tokenUri, _msgSender());
+        uint256 tokenId = _totalMinted.current();
+        string memory tokenUri = string(abi.encodePacked(BASE_URI, tokenId));
+        _mintToken(tokenId, tokenUri, _msgSender());
         _totalMinted.increment();
     }
 
