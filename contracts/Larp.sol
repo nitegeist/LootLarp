@@ -35,10 +35,10 @@ contract Larp is
     bytes4 private constant INTERFACE_ID_ERC2981 = 0x2a55205a;
 
     // Token ID constants
-    uint256 private constant MAX_ADDITIONAL_CLAIM_TOKEN_ID = 100;
-    uint256 private constant MAX_PUBLIC_CLAIM_TOKEN_ID = 290;
-    uint256 private constant MAX_PRIVATE_CLAIM_TOKEN_ID = 10;
-    uint256 private constant MAX_CLAIM_TOKEN_ID = 400;
+    uint256 private constant TOTAL_ADDITIONAL_TOKENS = 100;
+    uint256 private constant TOTAL_PUBLIC_TOKENS = 400;
+    uint256 private constant TOTAL_LEGENDARY_TOKENS = 8;
+    uint256 private constant TOTAL_SUPPLY = 508;
 
     // Status of public claim
     bool public publicClaim;
@@ -211,7 +211,7 @@ contract Larp is
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         require(
-            _tokenIds.length <= MAX_PUBLIC_CLAIM_TOKEN_ID,
+            _tokenIds.length <= TOTAL_PUBLIC_TOKENS,
             "Token amount exceeds public token limit"
         );
         for (uint256 i = 0; i < _tokenIds.length; i++) {
@@ -226,7 +226,7 @@ contract Larp is
         onlyRole(DEFAULT_ADMIN_ROLE)
     {
         require(
-            _tokenIds.length <= MAX_PRIVATE_CLAIM_TOKEN_ID,
+            _tokenIds.length <= TOTAL_LEGENDARY_TOKENS,
             "Token amount exceeds private token limit"
         );
         for (uint256 i = 0; i < _tokenIds.length; i++) {
@@ -247,8 +247,8 @@ contract Larp is
             "This address is not a preferred minter"
         );
         require(
-            balanceOf(owner) == 0,
-            "Only one token can be minted per address"
+            balanceOf(owner) <= 1,
+            "Only two tokens can be minted per address"
         );
         require(publicClaim == true, "Public mint is not active");
         uint256 totalMinted = _totalPublicMinted.current();
@@ -270,8 +270,8 @@ contract Larp is
             "This address is not a preferred minter"
         );
         require(
-            balanceOf(owner) == 0,
-            "Only one token can be minted per address"
+            balanceOf(owner) <= 1,
+            "Only two tokens can be minted per address"
         );
         require(privateClaim == true, "Private mint is not active");
         uint256 totalMinted = _totalPrivateMinted.current();
