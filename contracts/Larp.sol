@@ -23,13 +23,16 @@ contract Larp is
     bytes32 public constant PREFERRED_MINTER_ROLE =
         keccak256("PREFERRED_MINTER_ROLE");
     Counters.Counter private _totalMinted;
+    Counters.Counter private _doorMinted;
     uint256 listingPrice = 25 * 10e15; // 0.25 ETH
+    mapping(address => uint256) payments;
 
     // Address of interface identifier for royalty standard
     bytes4 private constant INTERFACE_ID_ERC2981 = 0x2a55205a;
 
     // Token ID constants
-    uint256 private constant TOTAL_CLAIMABLE_TOKENS = 500;
+    uint256 private constant TOTAL_CLAIMABLE_SUPPLY = 500;
+    uint256 private constant DOOR_SUPPLY = 100;
     uint256 private constant TOTAL_LEGENDARY_TOKENS = 8;
     uint256 private constant TOTAL_SUPPLY = 508;
 
@@ -40,17 +43,25 @@ contract Larp is
     uint256 startTime;
     uint256 endTime;
 
+    //door staff
+    uint256 startTimeDoorStaff;
+    uint256 endTimeDoorStaff;
+
     // Status of public claim
     bool public publicClaim;
 
     // Status of public claim
     bool public privateRedeem;
 
-    constructor(uint256 _startTime)
-        ERC721PresetMinterPauserAutoId("Larp", "LARP", BASE_URI)
-    {
+    constructor(
+        uint256 _startTime,
+        uint256 _startTimeDoorStaff,
+        uint256 _endTimeDoorStaff
+    ) ERC721PresetMinterPauserAutoId("Larp", "LARP", BASE_URI) {
         startTime = _startTime;
         endTime = _startTime + 1 days;
+        startTimeDoorStaff = _startTimeDoorStaff;
+        endTimeDoorStaff = _endTimeDoorStaff;
     }
 
     // Returns baseURI
@@ -145,6 +156,10 @@ contract Larp is
             "Public Mint: Incorrect payment amount"
         );
         require(
+            _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
+            "Total claimable supply reached"
+        );
+        require(
             balanceOf(_msgSender()) <= 2,
             "Only two tokens can be minted per address"
         );
@@ -170,6 +185,10 @@ contract Larp is
             "Private Mint: Only two tokens can be minted per address"
         );
         require(
+            _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
+            "Total claimable supply reached"
+        );
+        require(
             block.timestamp > startTime && block.timestamp < endTime,
             "Private Mint: Private mint inactive"
         );
@@ -180,24 +199,64 @@ contract Larp is
     }
 
     // Door staff mint function
-    function privateEventRedeem() external payable nonReentrant {
+    function doorStaffRedeem(address recipient) external payable nonReentrant {
+        require(privateRedeem, "Private Redeem: Private redeem is not active");
+        require(
+            startTimeDoorStaff < block.timestamp &&
+                endTimeDoorStaff > block.timestamp,
+            "Door staff mint is not active"
+        );
         require(
             hasRole(MINTER_ROLE, _msgSender()),
             "Private Redeem: Must have minter role to mint"
         );
         require(
-            msg.value == listingPrice,
+            payments[recipient] >= listingPrice,
             "Private Redeem: Incorrect payment amount"
         );
         require(
-            balanceOf(_msgSender()) <= 2,
+            balanceOf(recipient) <= 2,
             "Private Redeem: Only two tokens can be minted per address"
         );
-        require(privateRedeem, "Private Redeem: Private redeem is not active");
+        require(
+            _doorMinted.current() < DOOR_SUPPLY,
+            "Out of tokens for door staff"
+        );
+        require(
+            _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
+            "Total supply reached"
+        );
         uint256 tokenId = _totalMinted.current();
         string memory tokenUri = string(abi.encodePacked(BASE_URI, tokenId));
-        _mintToken(tokenId, tokenUri, _msgSender());
+        _mintToken(tokenId, tokenUri, recipient);
         _totalMinted.increment();
+        _doorMinted.increment();
+        payments[recipient] -= listingPrice;
+    }
+
+    // In case the price changes or door staff just needs to do a refund
+    function refundDoorStaffPayment(address payable recipient)
+        external
+        payable
+    {
+        require(
+            hasRole(MINTER_ROLE, _msgSender()),
+            "Private Redeem: Must have minter role to mint"
+        );
+        require(payments[_msgSender()] > 0, "No payment to refund");
+        (bool sent, ) = recipient.call{value: msg.value}("");
+        require(sent, "Failed to send Ether");
+        delete payments[recipient];
+    }
+
+    // Door staff can collect payment from recipients
+    function payDoorStaff() external payable nonReentrant {
+        require(balanceOf(_msgSender()) < 2, "Already owns 2 tokens");
+        require(
+            msg.value == listingPrice,
+            "Door Staff: Incorrect payment amount"
+        );
+        payments[_msgSender()] += listingPrice;
     }
 
     function _mintToken(
