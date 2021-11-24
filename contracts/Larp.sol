@@ -50,9 +50,6 @@ contract Larp is
     // Status of public claim
     bool public publicClaim;
 
-    // Status of public claim
-    bool public privateRedeem;
-
     constructor(
         uint256 _startTime,
         uint256 _startTimeDoorStaff,
@@ -117,17 +114,6 @@ contract Larp is
         );
         require(block.timestamp > endTime, "Private claim has not ended");
         publicClaim = !publicClaim;
-    }
-
-    // Toggle private redeem
-    function togglePrivateRedeem() external {
-        require(
-            hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
-            "Must have admin role to toggle private redeem"
-        );
-        require(block.timestamp > endTime, "Private claim has not ended");
-        require(!publicClaim, "Public claim has not ended");
-        privateRedeem = !privateRedeem;
     }
 
     // Gets listing price
@@ -200,7 +186,6 @@ contract Larp is
 
     // Door staff mint function
     function doorStaffRedeem(address recipient) external payable nonReentrant {
-        require(privateRedeem, "Private Redeem: Private redeem is not active");
         require(
             startTimeDoorStaff < block.timestamp &&
                 endTimeDoorStaff > block.timestamp,
