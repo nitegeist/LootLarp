@@ -12,7 +12,7 @@ import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAut
  *
  * @author Nitegeist
  */
-contract Larp is
+contract Redemption is
     IERC721Metadata,
     ERC721URIStorage,
     ERC721PresetMinterPauserAutoId,
@@ -54,7 +54,7 @@ contract Larp is
         uint256 _startTime,
         uint256 _startTimeDoorStaff,
         uint256 _endTimeDoorStaff
-    ) ERC721PresetMinterPauserAutoId("Larp", "LARP", BASE_URI) {
+    ) ERC721PresetMinterPauserAutoId("Redemption", "RDMN", BASE_URI) {
         startTime = _startTime;
         endTime = _startTime + 1 days;
         startTimeDoorStaff = _startTimeDoorStaff;
