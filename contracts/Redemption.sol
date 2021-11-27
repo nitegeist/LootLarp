@@ -43,7 +43,7 @@ contract Redemption is
     uint256 startTime;
     uint256 endTime;
 
-    //door staff
+    // Door staff redeem
     uint256 startTimeDoorStaff;
     uint256 endTimeDoorStaff;
 
@@ -136,9 +136,9 @@ contract Redemption is
     }
 
     // Public mint function
-    function publicMint() external payable nonReentrant {
+    function publicMint(uint256 _amount) external payable nonReentrant {
         require(
-            msg.value == listingPrice,
+            listingPrice * _amount == msg.value,
             "Public Mint: Incorrect payment amount"
         );
         require(
@@ -150,20 +150,24 @@ contract Redemption is
             "Only two tokens can be minted per address"
         );
         require(publicClaim, "Public mint is not active");
-        uint256 tokenId = _totalMinted.current();
-        string memory tokenUri = string(abi.encodePacked(BASE_URI, tokenId));
-        _mintToken(tokenId, tokenUri, _msgSender());
-        _totalMinted.increment();
+        for (uint256 i = 0; i < _amount; i++) {
+            uint256 tokenId = _totalMinted.current();
+            string memory tokenUri = string(
+                abi.encodePacked(BASE_URI, tokenId)
+            );
+            _mintToken(tokenId, tokenUri, _msgSender());
+            _totalMinted.increment();
+        }
     }
 
     // Private mint function
-    function privateMint() external payable nonReentrant {
+    function privateMint(uint256 _amount) external payable nonReentrant {
         require(
             hasRole(PREFERRED_MINTER_ROLE, _msgSender()),
             "Private Mint: Must have preferred minter role to mint"
         );
         require(
-            msg.value == listingPrice,
+            listingPrice * _amount == msg.value,
             "Private Mint: Incorrect payment amount"
         );
         require(
@@ -178,14 +182,22 @@ contract Redemption is
             block.timestamp > startTime && block.timestamp < endTime,
             "Private Mint: Private mint inactive"
         );
-        uint256 tokenId = _totalMinted.current();
-        string memory tokenUri = string(abi.encodePacked(BASE_URI, tokenId));
-        _mintToken(tokenId, tokenUri, _msgSender());
-        _totalMinted.increment();
+        for (uint256 i = 0; i < _amount; i++) {
+            uint256 tokenId = _totalMinted.current();
+            string memory tokenUri = string(
+                abi.encodePacked(BASE_URI, tokenId)
+            );
+            _mintToken(tokenId, tokenUri, _msgSender());
+            _totalMinted.increment();
+        }
     }
 
     // Door staff mint function
-    function doorStaffRedeem(address recipient) external payable nonReentrant {
+    function doorStaffRedeem(address recipient, uint256 _amount)
+        external
+        payable
+        nonReentrant
+    {
         require(
             startTimeDoorStaff < block.timestamp &&
                 endTimeDoorStaff > block.timestamp,
@@ -196,7 +208,7 @@ contract Redemption is
             "Private Redeem: Must have minter role to mint"
         );
         require(
-            payments[recipient] >= listingPrice,
+            payments[recipient] * _amount >= listingPrice,
             "Private Redeem: Incorrect payment amount"
         );
         require(
@@ -211,12 +223,16 @@ contract Redemption is
             _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
             "Total supply reached"
         );
-        uint256 tokenId = _totalMinted.current();
-        string memory tokenUri = string(abi.encodePacked(BASE_URI, tokenId));
-        _mintToken(tokenId, tokenUri, recipient);
-        _totalMinted.increment();
-        _doorMinted.increment();
-        payments[recipient] -= listingPrice;
+        for (uint256 i = 0; i < _amount; i++) {
+            uint256 tokenId = _totalMinted.current();
+            string memory tokenUri = string(
+                abi.encodePacked(BASE_URI, tokenId)
+            );
+            _mintToken(tokenId, tokenUri, recipient);
+            _totalMinted.increment();
+            _doorMinted.increment();
+            payments[recipient] -= listingPrice;
+        }
     }
 
     // In case the price changes or door staff just needs to do a refund
