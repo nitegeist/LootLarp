@@ -3,9 +3,11 @@ pragma solidity ^0.8.4;
 
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
+import "hardhat/console.sol";
 
 /**
  * @title ERC721 Smart Contract for LootLARP
@@ -19,6 +21,7 @@ contract Redemption is
     ReentrancyGuard
 {
     using Strings for uint256;
+    using MerkleProof for bytes32[];
     using Counters for Counters.Counter;
     bytes32 public constant PREFERRED_MINTER_ROLE =
         keccak256("PREFERRED_MINTER_ROLE");
@@ -47,7 +50,7 @@ contract Redemption is
     uint256 startTimeDoorStaff;
     uint256 endTimeDoorStaff;
 
-    // Status of public claim
+    // public claim boolean
     bool public publicClaim;
 
     constructor(
@@ -106,6 +109,30 @@ contract Redemption is
         }
     }
 
+    function _leaf(bytes32 _role, address _account)
+        internal
+        pure
+        returns (bytes32)
+    {
+        return keccak256(abi.encodePacked(_role, _account));
+    }
+
+    function isPreferredMinter(bytes32[] memory proof, bytes32 root)
+        public
+        view
+        returns (bool)
+    {
+        require(
+            MerkleProof.verify(
+                proof,
+                root,
+                _leaf(PREFERRED_MINTER_ROLE, _msgSender())
+            ),
+            "isPreferredMinter: Caller is not a preferred minter"
+        );
+        return true;
+    }
+
     // Toggle public claim
     function togglePublicClaim() external {
         require(
@@ -114,10 +141,12 @@ contract Redemption is
         );
         require(block.timestamp > endTime, "Private claim has not ended");
         publicClaim = !publicClaim;
+        console.log("Public Claim: %s", publicClaim);
     }
 
     // Gets listing price
     function getListingPrice() external view returns (uint256) {
+        console.log("Get Listing Price: %s", listingPrice);
         return listingPrice;
     }
 
@@ -133,10 +162,14 @@ contract Redemption is
             "Must have admin role to set price"
         );
         listingPrice = _wei;
+        console.log("Set Listing Price: %s", listingPrice);
     }
 
     // Public mint function
     function publicMint(uint256 _amount) external payable nonReentrant {
+        console.log("Public Mint: claim %s", publicClaim);
+        console.log("balance of %s: %d", _msgSender(), balanceOf(_msgSender()));
+        require(publicClaim, "Public mint is not active");
         require(
             listingPrice * _amount == msg.value,
             "Public Mint: Incorrect payment amount"
@@ -145,11 +178,11 @@ contract Redemption is
             _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
             "Total claimable supply reached"
         );
+        require(_amount <= 2, "Max of two token claims per address");
         require(
-            balanceOf(_msgSender()) <= 2,
+            balanceOf(_msgSender()) < 2,
             "Only two tokens can be minted per address"
         );
-        require(publicClaim, "Public mint is not active");
         for (uint256 i = 0; i < _amount; i++) {
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
@@ -161,26 +194,35 @@ contract Redemption is
     }
 
     // Private mint function
-    function privateMint(uint256 _amount) external payable nonReentrant {
+    function privateMint(
+        uint256 _amount,
+        bytes32[] memory proof,
+        bytes32 root
+    ) external payable nonReentrant {
+        console.log(
+            "Private mint active: %s",
+            block.timestamp > startTime && block.timestamp < endTime
+        );
         require(
-            hasRole(PREFERRED_MINTER_ROLE, _msgSender()),
-            "Private Mint: Must have preferred minter role to mint"
+            block.timestamp > startTime && block.timestamp < endTime,
+            "Private Mint: Private mint is not nactive"
+        );
+        require(
+            isPreferredMinter(proof, root),
+            "Private Mint: Caller is not a preferred minter"
         );
         require(
             listingPrice * _amount == msg.value,
             "Private Mint: Incorrect payment amount"
         );
+        require(_amount <= 2, "Max of two tokens per address");
         require(
-            balanceOf(_msgSender()) <= 2,
+            balanceOf(_msgSender()) < 2,
             "Private Mint: Only two tokens can be minted per address"
         );
         require(
             _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
             "Total claimable supply reached"
-        );
-        require(
-            block.timestamp > startTime && block.timestamp < endTime,
-            "Private Mint: Private mint inactive"
         );
         for (uint256 i = 0; i < _amount; i++) {
             uint256 tokenId = _totalMinted.current();
@@ -211,8 +253,9 @@ contract Redemption is
             payments[recipient] * _amount >= listingPrice,
             "Private Redeem: Incorrect payment amount"
         );
+        require(_amount <= 2, "Max of two tokens per address");
         require(
-            balanceOf(recipient) <= 2,
+            balanceOf(recipient) < 2,
             "Private Redeem: Only two tokens can be minted per address"
         );
         require(
