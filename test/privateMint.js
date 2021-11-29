@@ -2,23 +2,22 @@ const { SignerWithAddress } = require('@nomiclabs/hardhat-ethers/signers');
 const { MerkleTree } = require('merkletreejs');
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
-const { keccak256 } = require('ethereumjs-util');
+const { keccak256, bufferToHex } = require('ethereumjs-util');
 const { utils } = require('ethers');
 
 function merKeccak(accounts) {
 	const leaves = accounts.map((account) =>
-		Buffer.from(utils.keccak256(utils.defaultAbiCoder.encode(['address'], [account.address])).substr(2), 'hex')
+		bufferToHex(utils.keccak256(utils.defaultAbiCoder.encode(['address'], [account.address])))
 	);
 	const tree = new MerkleTree(leaves, keccak256, { sort: true });
-	const proof = accounts.reduce((proof, account) => {
-		const leaf = Buffer.from(
-			utils.keccak256(utils.defaultAbiCoder.encode(['address'], [account.address])).substr(2),
-			'hex'
-		);
-		proof[account.address] = tree.getHexProof(leaf);
-		return proof;
-	}, {});
-	return { tree, proof, root: tree.getHexRoot() };
+	// const proof = accounts.reduce((proof, account) => {
+	// 	const leaf = bufferToHex(utils.keccak256(utils.defaultAbiCoder.encode(['address'], [account.address])));
+	// 	console.log('Leaf: %s', leaf);
+	// 	proof[account.address] = tree.getHexProof(leaf);
+	// 	return proof;
+	// }, []);
+	// console.log('Proof: %s', proof);
+	return { tree, root: tree.getHexRoot() };
 }
 
 describe('Private Mint', function () {
@@ -37,7 +36,7 @@ describe('Private Mint', function () {
 		redemptionContract = await redemptionFactory.deploy(0, 0, 0);
 		await redemptionContract.deployed();
 		await redemptionContract.batchGrantPreferredMinterRole(addresses);
-		merkleTree = merKeccak(accounts);
+		// merkleTree = merKeccak(accounts);
 	});
 
 	// it('Should revert with private mint not active', async function () {
@@ -48,16 +47,38 @@ describe('Private Mint', function () {
 	// });
 
 	it('Should return true for a valid merkle proof', async function () {
-		accounts.map(
-			async (account) =>
-				expect(
-					await redemptionContract.isPreferredMinter(
-						merkleTree.proof[account.address],
-						merkleTree.root,
-						account.address
-					)
-				).to.be.true
+		// accounts.map(
+		// (account) =>
+
+		const leaves = accounts.map((account) =>
+			bufferToHex(utils.keccak256(utils.defaultAbiCoder.encode(['address'], [account.address])))
 		);
+		const tree = new MerkleTree(leaves, keccak256, { sort: true });
+		const root = tree.getHexRoot();
+		MerkleTree.print(tree);
+		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [accounts[0].address]));
+		console.log('Leaf: %s', leaf);
+		const proof = tree.getHexProof(leaf);
+		console.log('Proof: %s', proof);
+		expect(
+			await redemptionContract.isPreferredMinter(
+				proof,
+				// merkleTree.proof[accounts[0].address],
+				root,
+				accounts[0].address
+			)
+		).to.be.true;
+		// );
+		// accounts.map(
+		// 	async (account) =>
+		// 		expect(
+		// 			await redemptionContract.isPreferredMinter(
+		// 				merkleTree.proof[account.address],
+		// 				merkleTree.root,
+		// 				account.address
+		// 			)
+		// 		).to.be.true
+		// );
 	});
 
 	it('Should batch revoke preferred minter role', async function () {

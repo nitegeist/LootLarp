@@ -111,10 +111,6 @@ contract Redemption is
         }
     }
 
-    function _leaf(address account) internal pure returns (bytes32) {
-        return keccak256(abi.encodePacked(account));
-    }
-
     function isPreferredMinter(
         bytes32[] memory proof,
         bytes32 root,
@@ -123,13 +119,22 @@ contract Redemption is
         for (uint256 i = 0; i < proof.length; i++) {
             console.logBytes32(proof[i]);
         }
-        console.logBytes32(_leaf(_address));
+        console.logBytes32(keccak256(abi.encodePacked(_address)));
         console.logBytes32(root);
         console.log(
             "is pref minter: %s",
-            MerkleProof.verify(proof, root, _leaf(_address))
+            MerkleProof.verify(
+                proof,
+                root,
+                keccak256(abi.encodePacked(_address))
+            )
         );
-        return MerkleProof.verify(proof, root, _leaf(_address));
+        return
+            MerkleProof.verify(
+                proof,
+                root,
+                keccak256(abi.encodePacked(_address))
+            );
     }
 
     // Toggle public claim
