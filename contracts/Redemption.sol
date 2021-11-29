@@ -212,6 +212,10 @@ contract Redemption is
             "Private Mint: Private mint is not active"
         );
         require(
+            hasRole(PREFERRED_MINTER_ROLE, _msgSender()),
+            "Private Mint: Address is not a preferred minter"
+        );
+        require(
             isPreferredMinter(proof, root, _msgSender()),
             "Private Mint: Caller is not a preferred minter"
         );

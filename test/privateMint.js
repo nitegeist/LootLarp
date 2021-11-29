@@ -47,6 +47,16 @@ describe('Private Mint', function () {
 		});
 	});
 
+	it('Should return true for a non-minter valid merkle proof', async function () {
+		accounts.push(buyer); // push non minter adddress to the accounts list before making the tree
+		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
+		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
+		merkleTree.root = merkleTree.tree.getHexRoot();
+		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [buyer.address]));
+		const proof = merkleTree.tree.getHexProof(leaf);
+		expect(await redemptionContract.isPreferredMinter(proof, merkleTree.root, buyer.address)).to.be.true;
+	});
+
 	it('Should return false for a invalid merkle proof', async function () {
 		// MerkleTree.print(tree);
 		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [buyer.address]));
