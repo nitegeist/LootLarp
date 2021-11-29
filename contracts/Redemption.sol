@@ -88,6 +88,7 @@ contract Redemption is
                 "This address has already been assigned this role"
             );
             grantRole(PREFERRED_MINTER_ROLE, _accounts[i]);
+            // console.log("granted account %d: %s", i, _accounts[i]);
         }
     }
 
@@ -106,31 +107,29 @@ contract Redemption is
                 "This address does not have this role"
             );
             revokeRole(PREFERRED_MINTER_ROLE, _accounts[i]);
+            // console.log("revoked account %d: %s", i, _accounts[i]);
         }
     }
 
-    function _leaf(bytes32 _role, address _account)
-        internal
-        pure
-        returns (bytes32)
-    {
-        return keccak256(abi.encodePacked(_role, _account));
+    function _leaf(address account) internal pure returns (bytes32) {
+        return keccak256(abi.encodePacked(account));
     }
 
-    function isPreferredMinter(bytes32[] memory proof, bytes32 root)
-        public
-        view
-        returns (bool)
-    {
-        require(
-            MerkleProof.verify(
-                proof,
-                root,
-                _leaf(PREFERRED_MINTER_ROLE, _msgSender())
-            ),
-            "isPreferredMinter: Caller is not a preferred minter"
+    function isPreferredMinter(
+        bytes32[] memory proof,
+        bytes32 root,
+        address _address
+    ) public view returns (bool) {
+        for (uint256 i = 0; i < proof.length; i++) {
+            console.logBytes32(proof[i]);
+        }
+        console.logBytes32(_leaf(_address));
+        console.logBytes32(root);
+        console.log(
+            "is pref minter: %s",
+            MerkleProof.verify(proof, root, _leaf(_address))
         );
-        return true;
+        return MerkleProof.verify(proof, root, _leaf(_address));
     }
 
     // Toggle public claim
@@ -205,10 +204,10 @@ contract Redemption is
         );
         require(
             block.timestamp > startTime && block.timestamp < endTime,
-            "Private Mint: Private mint is not nactive"
+            "Private Mint: Private mint is not active"
         );
         require(
-            isPreferredMinter(proof, root),
+            isPreferredMinter(proof, root, _msgSender()),
             "Private Mint: Caller is not a preferred minter"
         );
         require(
@@ -235,7 +234,7 @@ contract Redemption is
     }
 
     // Door staff mint function
-    function doorStaffRedeem(address recipient, uint256 _amount)
+    function doorStaffRedeem(uint256 _amount, address recipient)
         external
         payable
         nonReentrant
@@ -247,16 +246,16 @@ contract Redemption is
         );
         require(
             hasRole(MINTER_ROLE, _msgSender()),
-            "Private Redeem: Must have minter role to mint"
+            "Door Mint: Must have minter role to mint"
         );
         require(
             payments[recipient] * _amount >= listingPrice,
-            "Private Redeem: Incorrect payment amount"
+            "Door Mint: Incorrect payment amount"
         );
         require(_amount <= 2, "Max of two tokens per address");
         require(
             balanceOf(recipient) < 2,
-            "Private Redeem: Only two tokens can be minted per address"
+            "Door Mint: Only two tokens can be minted per address"
         );
         require(
             _doorMinted.current() < DOOR_SUPPLY,

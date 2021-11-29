@@ -1,7 +1,7 @@
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 
-describe('Redemption Contract', function () {
+describe('Deployment', function () {
 	let owner, buyer, accounts;
 	let redemptionFactory, redemptionContract;
 	let maxSupply = 508;
@@ -14,20 +14,18 @@ describe('Redemption Contract', function () {
 		await redemptionContract.deployed();
 	});
 
-	describe('Deployment', function () {
-		it('Successfully deploys contract', async function () {
-			expect(await redemptionContract.publicClaim()).to.be.false;
-			expect(await redemptionContract.getListingPrice()).to.equal(ethers.utils.parseEther('0.25'));
-			expect(await redemptionContract.getAvailableSupply()).to.equal(maxSupply);
-		});
-		it('Should set listing price to 0.3', async function () {
-			await redemptionContract.connect(owner).setListingPrice(ethers.utils.parseEther('0.3'));
-			expect(await redemptionContract.getListingPrice()).to.equal(ethers.utils.parseEther('0.3'));
-		});
-		it('Should revert with not an admin', async function () {
-			await expect(
-				redemptionContract.connect(buyer).setListingPrice(ethers.utils.parseEther('0.3'))
-			).to.be.revertedWith('Must have admin role to set price');
-		});
+	it('Successfully deploys contract', async function () {
+		expect(await redemptionContract.publicClaim()).to.be.false;
+		expect(await redemptionContract.getListingPrice()).to.equal(ethers.utils.parseEther('0.25'));
+		expect(await redemptionContract.getAvailableSupply()).to.equal(maxSupply);
+	});
+	it('Should set listing price to 0.3', async function () {
+		await redemptionContract.connect(owner).setListingPrice(ethers.utils.parseEther('0.3'));
+		expect(await redemptionContract.getListingPrice()).to.equal(ethers.utils.parseEther('0.3'));
+	});
+	it('Should revert with not an admin', async function () {
+		await expect(redemptionContract.connect(buyer).setListingPrice(ethers.utils.parseEther('0.3'))).to.be.revertedWith(
+			'Must have admin role to set price'
+		);
 	});
 });
