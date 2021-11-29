@@ -115,20 +115,20 @@ contract Redemption is
         bytes32[] memory proof,
         bytes32 root,
         address _address
-    ) public view returns (bool) {
-        for (uint256 i = 0; i < proof.length; i++) {
-            console.logBytes32(proof[i]);
-        }
-        console.logBytes32(keccak256(abi.encodePacked(_address)));
-        console.logBytes32(root);
-        console.log(
-            "is pref minter: %s",
-            MerkleProof.verify(
-                proof,
-                root,
-                keccak256(abi.encodePacked(_address))
-            )
-        );
+    ) public pure returns (bool) {
+        // for (uint256 i = 0; i < proof.length; i++) {
+        //     console.logBytes32(proof[i]);
+        // }
+        // console.logBytes32(keccak256(abi.encodePacked(_address)));
+        // console.logBytes32(root);
+        // console.log(
+        //     "is pref minter: %s",
+        //     MerkleProof.verify(
+        //         proof,
+        //         root,
+        //         keccak256(abi.encodePacked(_address))
+        //     )
+        // );
         return
             MerkleProof.verify(
                 proof,
