@@ -58,4 +58,25 @@ describe('Verify', function () {
 			};
 		});
 	});
+
+	it('Should verify merkle proof with a single address', async function () {
+		const address = '0x8de806462823aD25056eE8104101F9367E208C14';
+		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [address]));
+		const proof = merkleTree.tree.getHexProof(leaf);
+		expect(await contract.verifyAddress(proof, merkleTree.root, address)).to.be.true;
+	});
+
+	it('Should verify merkle proof with a single token id ', async function () {
+		const token = '13988174029436432540570381205111963270292016538206553609831089847857228090619';
+		const leaf = bufferToHex(utils.solidityKeccak256(['uint256'], [token]));
+		const proof = merkleTree.tree.getHexProof(leaf);
+		expect(await contract.verifyToken(proof, merkleTree.root, token)).to.be.true;
+	});
+
+	it('Should verify merkle proof with a single pairing', async function () {
+		const address = '0x801EfbcFfc2Cf572D4C30De9CEE2a0AFeBfa1Ce1';
+		const token = '36416698825062681237969338228395867809712571178321010467907965453371102606457';
+		const proof = merkleTree.tree.getHexProof(hashToken(address, token));
+		expect(await contract.verify(proof, merkleTree.root, address, token)).to.be.true;
+	});
 });
