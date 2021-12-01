@@ -8,7 +8,7 @@ const tokens = require('./tokens.json');
 function hashToken(account, tokenId) {
 	let token;
 	Array.isArray(tokenId) ? tokenId.map((id) => (token = id)) : (token = tokenId);
-	return bufferToHex(utils.solidityKeccak256(['address', 'uint256'], [account, token]));
+	return bufferToHex(utils.solidityKeccak256(['address'], [account]));
 }
 
 describe('Verify', function () {
@@ -61,6 +61,7 @@ describe('Verify', function () {
 
 	it('Should verify merkle proof with a single address', async function () {
 		const address = '0x8de806462823aD25056eE8104101F9367E208C14';
+		const node = utils.solidityKeccak256(['address'], [address]);
 		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [address]));
 		const proof = merkleTree.tree.getHexProof(leaf);
 		expect(await contract.verifyAddress(proof, merkleTree.root, address)).to.be.true;
