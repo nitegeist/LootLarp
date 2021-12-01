@@ -27,16 +27,13 @@ describe('Private Mint', function () {
 	});
 
 	it('Should revert with private mint not active', async function () {
-		await redemptionContract.grantRole(redemptionContract.PREFERRED_MINTER_ROLE(), buyer.address);
-		accounts.push(buyer);
-		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
-		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
-		merkleTree.root = merkleTree.tree.getHexRoot();
-		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [buyer.address]));
-		const proof = merkleTree.tree.getHexProof(leaf);
-		await expect(redemptionContract.connect(buyer).privateMint(2, proof, merkleTree.root)).to.be.revertedWith(
-			'Private Mint: Private mint is not active'
-		);
+		accounts.map(async (account) => {
+			const leaf = bufferToHex(utils.solidityKeccak256(['address'], [account.address]));
+			const proof = merkleTree.tree.getHexProof(leaf);
+			await expect(redemptionContract.connect(buyer).privateMint(2, proof, merkleTree.root)).to.be.revertedWith(
+				'Private Mint: Private mint is not active'
+			);
+		});
 	});
 
 	it('Should return true for a valid merkle proof', async function () {
@@ -45,16 +42,6 @@ describe('Private Mint', function () {
 			const proof = merkleTree.tree.getHexProof(leaf);
 			expect(await redemptionContract.isPreferredMinter(proof, merkleTree.root, account.address)).to.be.true;
 		});
-	});
-
-	it('Should return true for a non-minter valid merkle proof', async function () {
-		accounts.push(buyer); // push non minter adddress to the accounts list before making the tree
-		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
-		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
-		merkleTree.root = merkleTree.tree.getHexRoot();
-		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [buyer.address]));
-		const proof = merkleTree.tree.getHexProof(leaf);
-		expect(await redemptionContract.isPreferredMinter(proof, merkleTree.root, buyer.address)).to.be.true;
 	});
 
 	it('Should return false for a invalid merkle proof', async function () {
