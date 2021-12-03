@@ -1,4 +1,3 @@
-const { SignerWithAddress } = require('@nomiclabs/hardhat-ethers/signers');
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { MerkleTree } = require('merkletreejs');
@@ -15,8 +14,6 @@ describe('Public Mint', function () {
 	beforeEach(async function () {
 		redemptionFactory = await hre.ethers.getContractFactory('Redemption');
 		[owner, buyer, ...accounts] = await ethers.getSigners();
-		await SignerWithAddress.create(owner);
-		await SignerWithAddress.create(buyer);
 		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
 		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
 		merkleTree.root = merkleTree.tree.getHexRoot();

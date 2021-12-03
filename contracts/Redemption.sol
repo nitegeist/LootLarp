@@ -254,16 +254,16 @@ contract Redemption is
         nonReentrant
     {
         require(
-            startTimeDoorStaff < block.timestamp &&
-                endTimeDoorStaff > block.timestamp,
-            "Door staff mint is not active"
+            block.timestamp > startTimeDoorStaff &&
+                block.timestamp < endTimeDoorStaff,
+            "Door Mint: Door staff mint is not active"
         );
         require(
             hasRole(MINTER_ROLE, _msgSender()),
             "Door Mint: Must have minter role to mint"
         );
         require(
-            payments[recipient] * _amount >= listingPrice,
+            listingPrice * _amount == msg.value,
             "Door Mint: Incorrect payment amount"
         );
         require(_amount <= 2, "Max of two tokens per address");
@@ -287,8 +287,8 @@ contract Redemption is
             _mintToken(tokenId, tokenUri, recipient);
             _totalMinted.increment();
             _doorMinted.increment();
-            payments[recipient] -= listingPrice;
         }
+        payments[recipient] -= listingPrice;
     }
 
     // In case the price changes or door staff just needs to do a refund
@@ -298,19 +298,19 @@ contract Redemption is
     {
         require(
             hasRole(MINTER_ROLE, _msgSender()),
-            "Private Redeem: Must have minter role to mint"
+            "Refund: Must have minter role to refund"
         );
-        require(payments[_msgSender()] > 0, "No payment to refund");
+        require(payments[recipient] > 0, "No payment to refund");
         (bool sent, ) = recipient.call{value: msg.value}("");
         require(sent, "Failed to send Ether");
         delete payments[recipient];
     }
 
     // Door staff can collect payment from recipients
-    function payDoorStaff() external payable nonReentrant {
+    function payDoorStaff(uint256 _amount) external payable nonReentrant {
         require(balanceOf(_msgSender()) < 2, "Already owns 2 tokens");
         require(
-            msg.value == listingPrice,
+            listingPrice * _amount == msg.value,
             "Door Staff: Incorrect payment amount"
         );
         payments[_msgSender()] += listingPrice;
