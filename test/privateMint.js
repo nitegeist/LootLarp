@@ -18,39 +18,22 @@ describe('Private Mint', function () {
 		await SignerWithAddress.create(owner);
 		await SignerWithAddress.create(buyer);
 		addresses = accounts.map((account) => account.address);
-		redemptionContract = await redemptionFactory.deploy(0, 0, 0);
-		await redemptionContract.deployed();
-		await redemptionContract.batchGrantPreferredMinterRole(addresses);
 		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
 		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
 		merkleTree.root = merkleTree.tree.getHexRoot();
+		redemptionContract = await redemptionFactory.deploy(0, 0, 0, merkleTree.root);
+		await redemptionContract.deployed();
+		await redemptionContract.batchGrantPreferredMinterRole(addresses);
 	});
 
 	it('Should revert with private mint not active', async function () {
 		accounts.map(async (account) => {
 			const leaf = bufferToHex(utils.solidityKeccak256(['address'], [account.address]));
 			const proof = merkleTree.tree.getHexProof(leaf);
-			await expect(redemptionContract.connect(buyer).privateMint(2, proof, merkleTree.root)).to.be.revertedWith(
+			await expect(redemptionContract.connect(buyer).privateMint(2, proof)).to.be.revertedWith(
 				'Private Mint: Private mint is not active'
 			);
 		});
-	});
-
-	it('Should return true for a valid merkle proof', async function () {
-		accounts.map(async (account) => {
-			const leaf = bufferToHex(utils.solidityKeccak256(['address'], [account.address]));
-			const proof = merkleTree.tree.getHexProof(leaf);
-			expect(await redemptionContract.isPreferredMinter(proof, merkleTree.root, account.address)).to.be.true;
-		});
-	});
-
-	it('Should return false for a invalid merkle proof', async function () {
-		// MerkleTree.print(tree);
-		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [buyer.address]));
-		// console.log('Leaf: %s', leaf);
-		const proof = merkleTree.tree.getHexProof(leaf);
-		// console.log('Proof: %s', proof);
-		expect(await redemptionContract.isPreferredMinter(proof, merkleTree.root, buyer.address)).to.be.false;
 	});
 
 	it('Should batch revoke preferred minter role', async function () {

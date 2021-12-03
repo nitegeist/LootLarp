@@ -23,6 +23,7 @@ contract Redemption is
     using Strings for uint256;
     using MerkleProof for bytes32[];
     using Counters for Counters.Counter;
+    bytes32 public immutable merkleRoot;
     bytes32 public constant PREFERRED_MINTER_ROLE =
         keccak256("PREFERRED_MINTER_ROLE");
     Counters.Counter private _totalMinted;
@@ -56,8 +57,10 @@ contract Redemption is
     constructor(
         uint256 _startTime,
         uint256 _startTimeDoorStaff,
-        uint256 _endTimeDoorStaff
+        uint256 _endTimeDoorStaff,
+        bytes32 _merkleRoot
     ) ERC721PresetMinterPauserAutoId("Redemption", "RDMN", BASE_URI) {
+        merkleRoot = _merkleRoot;
         startTime = _startTime;
         endTime = _startTime + 1 days;
         startTimeDoorStaff = _startTimeDoorStaff;
@@ -76,7 +79,9 @@ contract Redemption is
     }
 
     // Batch grants preferred minter role
-    function batchGrantPreferredMinterRole(address[] memory _accounts) public {
+    function batchGrantPreferredMinterRole(address[] memory _accounts)
+        external
+    {
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "Must have admin role grant preferred minter role"
@@ -111,11 +116,11 @@ contract Redemption is
         }
     }
 
-    function isPreferredMinter(
-        bytes32[] memory proof,
-        bytes32 root,
-        address _address
-    ) public pure returns (bool) {
+    function isPreferredMinter(bytes32[] calldata proof, address _address)
+        internal
+        view
+        returns (bool)
+    {
         // for (uint256 i = 0; i < proof.length; i++) {
         //     console.logBytes32(proof[i]);
         // }
@@ -132,7 +137,7 @@ contract Redemption is
         return
             MerkleProof.verify(
                 proof,
-                root,
+                merkleRoot,
                 keccak256(abi.encodePacked(_address))
             );
     }
@@ -198,11 +203,11 @@ contract Redemption is
     }
 
     // Private mint function
-    function privateMint(
-        uint256 _amount,
-        bytes32[] memory proof,
-        bytes32 root
-    ) external payable nonReentrant {
+    function privateMint(uint256 _amount, bytes32[] calldata proof)
+        external
+        payable
+        nonReentrant
+    {
         console.log(
             "Private mint active: %s",
             block.timestamp > startTime && block.timestamp < endTime
@@ -216,7 +221,7 @@ contract Redemption is
             "Private Mint: Address is not a preferred minter"
         );
         require(
-            isPreferredMinter(proof, root, _msgSender()),
+            isPreferredMinter(proof, _msgSender()),
             "Private Mint: Caller is not a preferred minter"
         );
         require(

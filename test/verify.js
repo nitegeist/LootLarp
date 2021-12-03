@@ -23,11 +23,14 @@ describe('Verify', function () {
 	});
 
 	it('Should claim token with valid merkle proof and return address of claimed token', async function () {
-		const address = '0xa111C225A0aFd5aD64221B1bc1D5d817e5D3Ca15';
-		const token = '56660740342816081431743222872731117427526580551422435935884080137676694505177';
-		const proof = merkleTree.tree.getHexProof(hashToken(token, address));
-		console.log('proof: ', proof);
-		await contract.claim(proof, 1, address, token);
-		expect(await contract.addressOfClaimedToken(proof, token, address)).to.equal(address);
+		const address = '0x30e2326ee1bf319EFA6117E6E6C8Df334243E76d';
+		const token1 = '16';
+		const token2 = '22';
+		const proof1 = merkleTree.tree.getHexProof(hashToken(token1, address));
+		await contract.claim(proof1, 1, address, token1);
+		const proof2 = merkleTree.tree.getHexProof(hashToken(token2, address));
+		await contract.claim(proof2, 1, address, token2);
+		expect(await contract.addressOfClaimedToken(proof1, token1, address)).to.equal(address);
+		expect(await contract.addressOfClaimedToken(proof2, token2, address)).to.equal(address);
 	});
 });
