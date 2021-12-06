@@ -185,7 +185,7 @@ contract Redemption is
             "Public Mint: Incorrect payment amount"
         );
         require(
-            _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
+            _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
             "Total claimable supply reached"
         );
         require(
@@ -239,7 +239,7 @@ contract Redemption is
             "Private Mint: Only two tokens can be minted per address"
         );
         require(
-            _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
+            _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
             "Total claimable supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
@@ -280,11 +280,11 @@ contract Redemption is
             "DoorStaffRedeem: recipient can only receive 2"
         );
         require(
-            _doorMinted.current() < DOOR_SUPPLY,
+            _amount + _doorMinted.current() <= DOOR_SUPPLY,
             "Out of tokens for door staff"
         );
         require(
-            _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
+            _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
             "Total supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
