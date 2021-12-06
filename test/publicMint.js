@@ -44,13 +44,6 @@ describe('Public Mint', function () {
 		).to.be.revertedWith('Max of two token claims per address');
 	});
 
-	it('Should revert with two token limit reached', async function () {
-		await redemptionContract.connect(buyer).publicMint(2, { value: ethers.utils.parseEther('0.5') });
-		await expect(redemptionContract.connect(buyer).publicMint(1, { value: payment })).to.be.revertedWith(
-			'Only two tokens can be minted per address'
-		);
-	});
-
 	it('Should revert with incorrect payment amount', async function () {
 		await expect(
 			redemptionContract.connect(buyer).publicMint(1, { value: ethers.utils.parseEther('0.3') })
