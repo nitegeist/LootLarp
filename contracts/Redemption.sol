@@ -30,6 +30,7 @@ contract Redemption is
     Counters.Counter private _doorMinted;
     uint256 listingPrice = 25 * 10e15; // 0.25 ETH
     mapping(address => uint256) payments;
+    mapping(address => uint256) claimCount;
 
     // Address of interface identifier for royalty standard
     bytes4 private constant INTERFACE_ID_ERC2981 = 0x2a55205a;
@@ -187,11 +188,13 @@ contract Redemption is
             _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
             "Total claimable supply reached"
         );
-        require(_amount <= 2, "Max of two token claims per address");
         require(
-            balanceOf(_msgSender()) < 2,
-            "Only two tokens can be minted per address"
+            _amount + balanceOf(_msgSender()) <= 2 &&
+            _amount + claimCount[_msgSender()] <= 2,
+            "Max of two token claims per address"
         );
+        
+
         for (uint256 i = 0; i < _amount; i++) {
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
@@ -200,6 +203,8 @@ contract Redemption is
             _mintToken(tokenId, tokenUri, _msgSender());
             _totalMinted.increment();
         }
+
+        claimCount[_msgSender()] += _amount;
     }
 
     // Private mint function
@@ -228,9 +233,9 @@ contract Redemption is
             listingPrice * _amount == msg.value,
             "Private Mint: Incorrect payment amount"
         );
-        require(_amount <= 2, "Max of two tokens per address");
         require(
-            balanceOf(_msgSender()) < 2,
+            _amount + balanceOf(_msgSender()) <= 2 &&
+            _amount + claimCount[_msgSender()] <= 2,
             "Private Mint: Only two tokens can be minted per address"
         );
         require(
@@ -245,6 +250,8 @@ contract Redemption is
             _mintToken(tokenId, tokenUri, _msgSender());
             _totalMinted.increment();
         }
+
+        claimCount[_msgSender()] += _amount;
     }
 
     // Door staff mint function
@@ -268,8 +275,9 @@ contract Redemption is
         );
         require(_amount <= 2, "Max of two tokens per address");
         require(
-            balanceOf(recipient) < 2,
-            "Door Mint: Only two tokens can be minted per address"
+            _amount + balanceOf(recipient) <= 2 && 
+            _amount + claimCount[recipient] <= 2,
+            "DoorStaffRedeem: recipient can only receive 2"
         );
         require(
             _doorMinted.current() < DOOR_SUPPLY,
@@ -289,6 +297,7 @@ contract Redemption is
             _doorMinted.increment();
         }
         payments[recipient] -= listingPrice;
+        claimCount[recipient] += _amount;
     }
 
     // In case the price changes or door staff just needs to do a refund
