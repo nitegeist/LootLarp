@@ -185,9 +185,10 @@ contract Redemption is
             "Public Mint: Incorrect payment amount"
         );
         require(
-            _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
+            _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
             "Total claimable supply reached"
         );
+        require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
             _amount + claimCount[_msgSender()] <= 2,
@@ -233,13 +234,14 @@ contract Redemption is
             listingPrice * _amount == msg.value,
             "Private Mint: Incorrect payment amount"
         );
+        require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
             _amount + claimCount[_msgSender()] <= 2,
             "Private Mint: Only two tokens can be minted per address"
         );
         require(
-            _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
+            _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
             "Total claimable supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
@@ -273,18 +275,18 @@ contract Redemption is
             listingPrice * _amount == msg.value,
             "Door Mint: Incorrect payment amount"
         );
-        require(_amount <= 2, "Max of two tokens per address");
+        require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(recipient) <= 2 && 
             _amount + claimCount[recipient] <= 2,
             "DoorStaffRedeem: recipient can only receive 2"
         );
         require(
-            _doorMinted.current() < DOOR_SUPPLY,
+            _amount + _doorMinted.current() <= DOOR_SUPPLY,
             "Out of tokens for door staff"
         );
         require(
-            _totalMinted.current() < TOTAL_CLAIMABLE_SUPPLY,
+            _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
             "Total supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
