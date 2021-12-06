@@ -188,6 +188,7 @@ contract Redemption is
             _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
             "Total claimable supply reached"
         );
+        require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
             _amount + claimCount[_msgSender()] <= 2,
@@ -233,6 +234,7 @@ contract Redemption is
             listingPrice * _amount == msg.value,
             "Private Mint: Incorrect payment amount"
         );
+        require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
             _amount + claimCount[_msgSender()] <= 2,
@@ -273,7 +275,7 @@ contract Redemption is
             listingPrice * _amount == msg.value,
             "Door Mint: Incorrect payment amount"
         );
-        require(_amount <= 2, "Max of two tokens per address");
+        require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(recipient) <= 2 && 
             _amount + claimCount[recipient] <= 2,
