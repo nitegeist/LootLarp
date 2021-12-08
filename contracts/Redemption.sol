@@ -4,6 +4,7 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
@@ -15,6 +16,7 @@ import "hardhat/console.sol";
  * @author Nitegeist
  */
 contract Redemption is
+    Initializable,
     IERC721Metadata,
     ERC721URIStorage,
     ERC721PresetMinterPauserAutoId,
@@ -23,7 +25,8 @@ contract Redemption is
     using Strings for uint256;
     using MerkleProof for bytes32[];
     using Counters for Counters.Counter;
-    bytes32 public immutable merkleRoot;
+    bytes32 public immutable prefferedMinterRoot;
+    bytes32 public claimedTokensRoot;
     bytes32 public constant PREFERRED_MINTER_ROLE =
         keccak256("PREFERRED_MINTER_ROLE");
     Counters.Counter private _totalMinted;
@@ -31,6 +34,7 @@ contract Redemption is
     uint256 listingPrice = 25 * 10e15; // 0.25 ETH
     mapping(address => uint256) payments;
     mapping(address => uint256) claimCount;
+    mapping(uint256 => address) claimedTokenAddresses;
 
     // Address of interface identifier for royalty standard
     bytes4 private constant INTERFACE_ID_ERC2981 = 0x2a55205a;
@@ -55,13 +59,16 @@ contract Redemption is
     // public claim boolean
     bool public publicClaim;
 
+    // initializer
+    bool public initialized;
+
     constructor(
         uint256 _startTime,
         uint256 _startTimeDoorStaff,
         uint256 _endTimeDoorStaff,
-        bytes32 _merkleRoot
+        bytes32 _prefferedMinterRoot
     ) ERC721PresetMinterPauserAutoId("Redemption", "RDMN", BASE_URI) {
-        merkleRoot = _merkleRoot;
+        prefferedMinterRoot = _prefferedMinterRoot;
         startTime = _startTime;
         endTime = _startTime + 1 days;
         startTimeDoorStaff = _startTimeDoorStaff;
@@ -138,9 +145,41 @@ contract Redemption is
         return
             MerkleProof.verify(
                 proof,
-                merkleRoot,
+                prefferedMinterRoot,
                 keccak256(abi.encodePacked(_address))
             );
+    }
+
+    function setClaimedTokenRoot(bytes32 _root) external initializer {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
+        require(!initialized, "Already initialized");
+        claimedTokensRoot = _root;
+        initialized = true;
+    }
+
+    function hasClaimedTokens(
+        bytes32[] calldata merkleProof,
+        uint256 _tokenId,
+        address _account
+    ) internal view returns (bool) {
+        return
+            MerkleProof.verify(
+                merkleProof,
+                claimedTokensRoot,
+                keccak256(abi.encodePacked(_tokenId, _account))
+            );
+    }
+
+    function addressOfClaimedToken(
+        bytes32[] calldata merkleProof,
+        uint256 _tokenId,
+        address _account
+    ) external view returns (address) {
+        require(
+            hasClaimedTokens(merkleProof, _tokenId, _account),
+            "Return address: Invalid merkle proof"
+        );
+        return claimedTokenAddresses[_tokenId];
     }
 
     // Toggle public claim
@@ -191,10 +230,9 @@ contract Redemption is
         require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
-            _amount + claimCount[_msgSender()] <= 2,
+                _amount + claimCount[_msgSender()] <= 2,
             "Max of two token claims per address"
         );
-        
 
         for (uint256 i = 0; i < _amount; i++) {
             uint256 tokenId = _totalMinted.current();
@@ -202,9 +240,9 @@ contract Redemption is
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, _msgSender());
+            claimedTokenAddresses[tokenId] = _msgSender();
             _totalMinted.increment();
         }
-
         claimCount[_msgSender()] += _amount;
     }
 
@@ -237,7 +275,7 @@ contract Redemption is
         require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
-            _amount + claimCount[_msgSender()] <= 2,
+                _amount + claimCount[_msgSender()] <= 2,
             "Private Mint: Only two tokens can be minted per address"
         );
         require(
@@ -250,6 +288,7 @@ contract Redemption is
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, _msgSender());
+            claimedTokenAddresses[tokenId] = _msgSender();
             _totalMinted.increment();
         }
 
@@ -277,8 +316,8 @@ contract Redemption is
         );
         require(_amount > 0, "Cannot mint 0");
         require(
-            _amount + balanceOf(recipient) <= 2 && 
-            _amount + claimCount[recipient] <= 2,
+            _amount + balanceOf(recipient) <= 2 &&
+                _amount + claimCount[recipient] <= 2,
             "DoorStaffRedeem: recipient can only receive 2"
         );
         require(
@@ -295,6 +334,7 @@ contract Redemption is
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, recipient);
+            claimedTokenAddresses[tokenId] = recipient;
             _totalMinted.increment();
             _doorMinted.increment();
         }
