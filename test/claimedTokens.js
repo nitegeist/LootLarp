@@ -34,20 +34,20 @@ describe('Claimed Tokens', function () {
 	});
 
 	it('Should not allow an account that is not admin to set the root', async function () {
-		await expect(redemptionContract.connect(buyer).setClaimedTokenRoot(claimedTokenMerkleTree.root)).to.be.revertedWith(
+		await expect(redemptionContract.connect(buyer).initialize(claimedTokenMerkleTree.root)).to.be.revertedWith(
 			'Must be an admin'
 		);
 	});
 
 	it('Should set the merkle tree root only once', async function () {
-		await redemptionContract.connect(owner).setClaimedTokenRoot(claimedTokenMerkleTree.root);
-		await expect(redemptionContract.connect(owner).setClaimedTokenRoot(claimedTokenMerkleTree.root)).to.be.revertedWith(
+		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
+		await expect(redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root)).to.be.revertedWith(
 			'Contract instance has already been initialized'
 		);
 	});
 
 	it('Should claim token with valid merkle proof and return address of claimed tokens', async function () {
-		await redemptionContract.connect(owner).setClaimedTokenRoot(claimedTokenMerkleTree.root);
+		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
 		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('0.5') });
 		for (let i = 0; i < 2; i++) {
 			const proof = claimedTokenMerkleTree.tree.getHexProof(hashToken(i, buyer.address));

@@ -4,7 +4,6 @@ pragma solidity ^0.8.4;
 import "@openzeppelin/contracts/utils/Counters.sol";
 import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@openzeppelin/contracts-upgradeable/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
@@ -16,7 +15,6 @@ import "hardhat/console.sol";
  * @author Nitegeist
  */
 contract Redemption is
-    Initializable,
     IERC721Metadata,
     ERC721URIStorage,
     ERC721PresetMinterPauserAutoId,
@@ -40,10 +38,9 @@ contract Redemption is
     bytes4 private constant INTERFACE_ID_ERC2981 = 0x2a55205a;
 
     // Token ID constants
-    uint256 private constant TOTAL_CLAIMABLE_SUPPLY = 500;
     uint256 private constant DOOR_SUPPLY = 100;
     uint256 private constant TOTAL_LEGENDARY_TOKENS = 8;
-    uint256 private constant TOTAL_SUPPLY = 508;
+    uint256 private constant TOTAL_SUPPLY = 508; // 500 + legendaries
 
     // baseUri
     string public constant BASE_URI = "ipfs://";
@@ -73,6 +70,23 @@ contract Redemption is
         endTime = _startTime + 1 days;
         startTimeDoorStaff = _startTimeDoorStaff;
         endTimeDoorStaff = _endTimeDoorStaff;
+    }
+
+    function initialize(bytes32 _root) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
+        require(!initialized, "Contract instance has already been initialized");
+
+        // Mint 8 legendaries to caller
+        for (uint256 i=0; i<TOTAL_LEGENDARY_TOKENS; i++) {
+            uint256 tokenId = _totalMinted.current();
+            string memory tokenUri = string(
+                abi.encodePacked(BASE_URI, tokenId)
+            );
+            _mintToken(tokenId, tokenUri, _msgSender());
+            _totalMinted.increment();
+        }
+        initialized = true;
+        claimedTokensRoot = _root;
     }
 
     // Returns baseURI
@@ -150,13 +164,6 @@ contract Redemption is
             );
     }
 
-    function setClaimedTokenRoot(bytes32 _root) external {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
-        require(!initialized, "Contract instance has already been initialized");
-        initialized = true;
-        claimedTokensRoot = _root;
-    }
-
     function hasClaimedTokens(
         bytes32[] calldata merkleProof,
         uint256 _tokenId,
@@ -219,13 +226,14 @@ contract Redemption is
     function publicMint(uint256 _amount) external payable nonReentrant {
         console.log("Public Mint: claim %s", publicClaim);
         console.log("balance of %s: %d", _msgSender(), balanceOf(_msgSender()));
+        require(initialized, "!initialized");
         require(publicClaim, "Public mint is not active");
         require(
             listingPrice * _amount == msg.value,
             "Public Mint: Incorrect payment amount"
         );
         require(
-            _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
+            _amount + _totalMinted.current() <= TOTAL_SUPPLY,
             "Total claimable supply reached"
         );
         require(_amount > 0, "Cannot mint 0");
@@ -258,6 +266,7 @@ contract Redemption is
             "Private mint active: %s",
             block.timestamp > startTime && block.timestamp < endTime
         );
+        require(initialized, "!initialized");
         require(
             block.timestamp > startTime && block.timestamp < endTime,
             "Private Mint: Private mint is not active"
@@ -281,8 +290,8 @@ contract Redemption is
             "Private Mint: Only two tokens can be minted per address"
         );
         require(
-            _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
-            "Total claimable supply reached"
+            _amount + _totalMinted.current() <= TOTAL_SUPPLY,
+            "Total supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
             uint256 tokenId = _totalMinted.current();
@@ -327,7 +336,7 @@ contract Redemption is
             "Out of tokens for door staff"
         );
         require(
-            _amount + _totalMinted.current() <= TOTAL_CLAIMABLE_SUPPLY,
+            _amount + _totalMinted.current() <= TOTAL_SUPPLY,
             "Total supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
