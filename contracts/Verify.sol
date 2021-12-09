@@ -21,22 +21,19 @@ contract Verify {
         uint256 _tokenId,
         address _account
     ) public view returns (bool) {
-        bytes32 node = keccak256(abi.encodePacked(_tokenId, _account));
-        return MerkleProof.verify(merkleProof, merkleRoot, node);
+        return
+            MerkleProof.verify(
+                merkleProof,
+                merkleRoot,
+                keccak256(abi.encodePacked(_tokenId, _account))
+            );
     }
 
-    function claim(
-        bytes32[] calldata merkleProof,
-        uint256 _amount,
-        address _account,
-        uint256 _tokenId
-    ) external payable {
-        require(
-            verify(merkleProof, _tokenId, _account),
-            "Claim: Invalid merkle proof"
-        );
+    function claim(uint256 _amount) external payable {
         for (uint256 i = 0; i < _amount; i++) {
-            claimedTokenAddresses[_tokenId] = _account;
+            uint256 tokenId = tokens.current();
+            claimedTokenAddresses[tokenId] = msg.sender;
+            tokens.increment();
         }
     }
 

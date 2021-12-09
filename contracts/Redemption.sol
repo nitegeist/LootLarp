@@ -150,11 +150,11 @@ contract Redemption is
             );
     }
 
-    function setClaimedTokenRoot(bytes32 _root) external initializer {
+    function setClaimedTokenRoot(bytes32 _root) external {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
-        require(!initialized, "Already initialized");
-        claimedTokensRoot = _root;
+        require(!initialized, "Contract instance has already been initialized");
         initialized = true;
+        claimedTokensRoot = _root;
     }
 
     function hasClaimedTokens(
@@ -175,6 +175,7 @@ contract Redemption is
         uint256 _tokenId,
         address _account
     ) external view returns (address) {
+        console.log("Address: %s", _account);
         require(
             hasClaimedTokens(merkleProof, _tokenId, _account),
             "Return address: Invalid merkle proof"
@@ -236,6 +237,7 @@ contract Redemption is
 
         for (uint256 i = 0; i < _amount; i++) {
             uint256 tokenId = _totalMinted.current();
+            console.log("Token: %d", tokenId);
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
             );
