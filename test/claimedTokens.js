@@ -31,6 +31,7 @@ describe('Claimed Tokens', function () {
 		redemptionContract = await redemptionFactory.deploy(0, 0, 0, preferredMinterMerkleTree.root);
 		await redemptionContract.deployed();
 		await redemptionContract.togglePublicClaim();
+		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
 	});
 
 	it('Should not allow an account that is not admin to set the root', async function () {
@@ -40,7 +41,6 @@ describe('Claimed Tokens', function () {
 	});
 
 	it('Should set the merkle tree root only once', async function () {
-		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
 		await expect(redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root)).to.be.revertedWith(
 			'Already initialized'
 		);
@@ -59,6 +59,15 @@ describe('Claimed Tokens', function () {
 		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
 		await expect(redemptionContract.connect(buyer).claim(0, 1, proof1, 1, 1, proof2)).to.be.revertedWith(
 			'Loot args cannot be the same'
+		);
+	});
+
+	it('Should revert with not owner of token id 1', async function () {
+		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('0.5') });
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(0, accounts[0].address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, accounts[0].address));
+		await expect(redemptionContract.connect(buyer).claim(0, 0, proof1, 1, 1, proof2)).to.be.revertedWith(
+			'!owner of _tokenId1'
 		);
 	});
 
