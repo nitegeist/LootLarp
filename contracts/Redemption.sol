@@ -12,7 +12,7 @@ import "hardhat/console.sol";
 /**
  * @title ERC721 Smart Contract for LootLARP
  *
- * @author Nitegeist
+ * @author Nitegeist, @carlfarterson
  */
 contract Redemption is
     IERC721Metadata,
@@ -31,8 +31,13 @@ contract Redemption is
     Counters.Counter private _doorMinted;
     uint256 listingPrice = 25 * 10e15; // 0.25 ETH
     mapping(address => uint256) payments;
-    mapping(address => uint256) claimCount;
-    mapping(uint256 => address) claimedTokenAddresses;
+    mapping(address => uint256) mintCount;
+    struct Claim {
+        uint256 tokenId;
+        uint256 lootId;
+    }
+    mapping(address => Claim) item1Claims;
+    mapping(address => Claim) item2Claims;
 
     // Address of interface identifier for royalty standard
     bytes4 private constant INTERFACE_ID_ERC2981 = 0x2a55205a;
@@ -164,11 +169,12 @@ contract Redemption is
             );
     }
 
-    function hasClaimedTokens(
+    function isValidLootClaim(
         bytes32[] calldata merkleProof,
         uint256 _tokenId,
         address _account
-    ) internal view returns (bool) {
+    ) public view returns (bool) {
+        require(initialized, "!initialized");
         return
             MerkleProof.verify(
                 merkleProof,
@@ -177,17 +183,55 @@ contract Redemption is
             );
     }
 
-    function addressOfClaimedToken(
-        bytes32[] calldata merkleProof,
-        uint256 _tokenId,
-        address _account
-    ) external view returns (address) {
-        console.log("Address: %s", _account);
-        require(
-            hasClaimedTokens(merkleProof, _tokenId, _account),
-            "Return address: Invalid merkle proof"
-        );
-        return claimedTokenAddresses[_tokenId];
+    function claim(
+        uint256 _tokenId1,
+        uint256 _lootId1,
+        bytes32[] calldata merkleProof1,
+        uint256 _tokenId2,
+        uint256 _lootId2,
+        bytes32[] calldata merkleProof2
+    ) external {
+        require(_tokenId1 != _tokenId2, "Token ID args cannot be the same");
+        require(_lootId1 != _lootId2, "Loot args cannot be the same");
+
+        Claim storage item1 = item1Claims[_msgSender()];
+        Claim storage item2 = item2Claims[_msgSender()];
+
+        if (item1.tokenId != 0) {
+            require(_tokenId2 != item1.tokenId, "_tokenId2 == item1.tokenId");
+            require(_lootId2 != item1._lootId, "_lootId2 == item1.lootId");
+        }
+        if (item2.tokenId != 0) {
+            require(_tokenId1 != item2.tokenId, "_tokenId1 == item2.tokenId");
+            require(_lootId1 != item2._lootId, "_lootId1 == item2.lootId");
+        }
+
+        if (_tokenId1 != 0) {
+            require(item1.tokenId == 0, "item1 claimed");
+            require(ownerOf(_tokenId1) == _msgSender(), "!owner of _tokenId1");
+            require(
+                isValidLootClaim(merkleProof1, _tokenId1, _msgSender()),
+                "invalid item1 proof"
+            );
+            item1.tokenId = _tokenId1;
+            item1.lootId = _lootId1;
+        }
+        if (item2 != 0) {
+            require(item1.tokenId != 0, "Cannot claim item2 before item1");
+            require(item2.tokenId == 0, "item2 claimed");
+            require(ownerOf(_tokenId2) == _msgSender(), "!owner of _tokenId2");
+            require(
+                isValidLootClaim(merkleProof2, _tokenId2, _msgSender()),
+                "invalid item2 proof"
+            );
+            item2.tokenId = _tokenId2;
+            item2.lootId = _lootId2;
+        }
+    }
+
+    function viewClaims(address _account) external view returns (Claim memory item1, Claim memory item2) {
+        item1 = item1Claims[_account];
+        item2 = item2Claims[_account];
     }
 
     // Toggle public claim
@@ -239,8 +283,8 @@ contract Redemption is
         require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
-                _amount + claimCount[_msgSender()] <= 2,
-            "Max of two token claims per address"
+                _amount + mintCount[_msgSender()] <= 2,
+
         );
 
         for (uint256 i = 0; i < _amount; i++) {
@@ -253,8 +297,8 @@ contract Redemption is
             claimedTokenAddresses[tokenId] = _msgSender();
             _totalMinted.increment();
         }
-        claimCount[_msgSender()] += _amount;
-    }
+        mintCount[_msgSender()] += _amount;
+
 
     // Private mint function
     function privateMint(uint256 _amount, bytes32[] calldata proof)
@@ -286,8 +330,8 @@ contract Redemption is
         require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
-                _amount + claimCount[_msgSender()] <= 2,
-            "Private Mint: Only two tokens can be minted per address"
+                _amount + mintCount[_msgSender()] <= 2,
+
         );
         require(
             _amount + _totalMinted.current() <= TOTAL_SUPPLY,
@@ -303,8 +347,8 @@ contract Redemption is
             _totalMinted.increment();
         }
 
-        claimCount[_msgSender()] += _amount;
-    }
+        mintCount[_msgSender()] += _amount;
+
 
     // Door staff mint function
     function doorStaffRedeem(uint256 _amount, address recipient)
@@ -328,8 +372,8 @@ contract Redemption is
         require(_amount > 0, "Cannot mint 0");
         require(
             _amount + balanceOf(recipient) <= 2 &&
-                _amount + claimCount[recipient] <= 2,
-            "DoorStaffRedeem: recipient can only receive 2"
+                _amount + mintCount[recipient] <= 2,
+
         );
         require(
             _amount + _doorMinted.current() <= DOOR_SUPPLY,
@@ -350,8 +394,8 @@ contract Redemption is
             _doorMinted.increment();
         }
         payments[recipient] -= listingPrice;
-        claimCount[recipient] += _amount;
-    }
+        mintCount[recipient] += _amount;
+
 
     // In case the price changes or door staff just needs to do a refund
     function refundDoorStaffPayment(address payable recipient)
