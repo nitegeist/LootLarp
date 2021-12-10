@@ -79,10 +79,10 @@ contract Redemption is
 
     function initialize(bytes32 _root) external {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
-        require(!initialized, "Contract instance has already been initialized");
+        require(!initialized, "Already initialized");
 
         // Mint 8 legendaries to caller
-        for (uint256 i=0; i<TOTAL_LEGENDARY_TOKENS; i++) {
+        for (uint256 i = 0; i < TOTAL_LEGENDARY_TOKENS; i++) {
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
@@ -199,14 +199,14 @@ contract Redemption is
 
         if (item1.tokenId != 0) {
             require(_tokenId2 != item1.tokenId, "_tokenId2 == item1.tokenId");
-            require(_lootId2 != item1._lootId, "_lootId2 == item1.lootId");
+            require(_lootId2 != item1.lootId, "_lootId2 == item1.lootId");
         }
         if (item2.tokenId != 0) {
             require(_tokenId1 != item2.tokenId, "_tokenId1 == item2.tokenId");
-            require(_lootId1 != item2._lootId, "_lootId1 == item2.lootId");
+            require(_lootId1 != item2.lootId, "_lootId1 == item2.lootId");
         }
 
-        if (_tokenId1 != 0) {
+        if (item1.tokenId != 0 && item1.lootId != 0) {
             require(item1.tokenId == 0, "item1 claimed");
             require(ownerOf(_tokenId1) == _msgSender(), "!owner of _tokenId1");
             require(
@@ -216,7 +216,7 @@ contract Redemption is
             item1.tokenId = _tokenId1;
             item1.lootId = _lootId1;
         }
-        if (item2 != 0) {
+        if (item2.tokenId != 0 && item2.lootId != 0) {
             require(item1.tokenId != 0, "Cannot claim item2 before item1");
             require(item2.tokenId == 0, "item2 claimed");
             require(ownerOf(_tokenId2) == _msgSender(), "!owner of _tokenId2");
@@ -229,7 +229,15 @@ contract Redemption is
         }
     }
 
-    function viewClaims(address _account) external view returns (Claim memory item1, Claim memory item2) {
+    function viewClaims(address _account)
+        external
+        view
+        returns (Claim memory item1, Claim memory item2)
+    {
+        require(
+            hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
+            "Must have admin role to view claims"
+        );
         item1 = item1Claims[_account];
         item2 = item2Claims[_account];
     }
@@ -284,21 +292,19 @@ contract Redemption is
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
                 _amount + mintCount[_msgSender()] <= 2,
-
+            "Max of two token claims per address"
         );
 
         for (uint256 i = 0; i < _amount; i++) {
             uint256 tokenId = _totalMinted.current();
-            console.log("Token: %d", tokenId);
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, _msgSender());
-            claimedTokenAddresses[tokenId] = _msgSender();
             _totalMinted.increment();
         }
         mintCount[_msgSender()] += _amount;
-
+    }
 
     // Private mint function
     function privateMint(uint256 _amount, bytes32[] calldata proof)
@@ -331,7 +337,7 @@ contract Redemption is
         require(
             _amount + balanceOf(_msgSender()) <= 2 &&
                 _amount + mintCount[_msgSender()] <= 2,
-
+            "Max of two token claims per address"
         );
         require(
             _amount + _totalMinted.current() <= TOTAL_SUPPLY,
@@ -343,12 +349,11 @@ contract Redemption is
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, _msgSender());
-            claimedTokenAddresses[tokenId] = _msgSender();
             _totalMinted.increment();
         }
 
         mintCount[_msgSender()] += _amount;
-
+    }
 
     // Door staff mint function
     function doorStaffRedeem(uint256 _amount, address recipient)
@@ -373,7 +378,7 @@ contract Redemption is
         require(
             _amount + balanceOf(recipient) <= 2 &&
                 _amount + mintCount[recipient] <= 2,
-
+            "Max of two token claims per address"
         );
         require(
             _amount + _doorMinted.current() <= DOOR_SUPPLY,
@@ -389,13 +394,13 @@ contract Redemption is
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, recipient);
-            claimedTokenAddresses[tokenId] = recipient;
+
             _totalMinted.increment();
             _doorMinted.increment();
         }
         payments[recipient] -= listingPrice;
         mintCount[recipient] += _amount;
-
+    }
 
     // In case the price changes or door staff just needs to do a refund
     function refundDoorStaffPayment(address payable recipient)

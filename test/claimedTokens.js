@@ -2,7 +2,7 @@ const { MerkleTree } = require('merkletreejs');
 const { expect } = require('chai');
 const { ethers } = require('hardhat');
 const { keccak256, bufferToHex } = require('ethereumjs-util');
-const { utils } = require('ethers');
+const { utils, BigNumber } = require('ethers');
 const tokens = require('./tokens.json');
 
 function hashToken(tokenId, account) {
@@ -42,16 +42,58 @@ describe('Claimed Tokens', function () {
 	it('Should set the merkle tree root only once', async function () {
 		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
 		await expect(redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root)).to.be.revertedWith(
-			'Contract instance has already been initialized'
+			'Already initialized'
 		);
 	});
 
-	it('Should claim token with valid merkle proof and return address of claimed tokens', async function () {
-		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
-		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('0.5') });
-		for (let i = 0; i < 2; i++) {
-			const proof = claimedTokenMerkleTree.tree.getHexProof(hashToken(i, buyer.address));
-			expect(await redemptionContract.addressOfClaimedToken(proof, i, buyer.address)).to.equal(buyer.address);
-		}
+	it('Should revert with same token Id for item1 & item2', async function () {
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(0, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		await expect(redemptionContract.connect(buyer).claim(0, 1, proof1, 0, 1, proof2)).to.be.revertedWith(
+			'Token ID args cannot be the same'
+		);
+	});
+
+	it('Should revert with same loot Id for item1 & item2', async function () {
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(0, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		await expect(redemptionContract.connect(buyer).claim(0, 1, proof1, 1, 1, proof2)).to.be.revertedWith(
+			'Loot args cannot be the same'
+		);
+	});
+
+	it('Should revert with must have admin to view claims', async function () {
+		await expect(redemptionContract.connect(buyer).viewClaims(buyer.address)).to.be.revertedWith(
+			'Must have admin role to view claims'
+		);
+	});
+
+	it('Should revert with invalid item1 proof', async function () {
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(200, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		await expect(redemptionContract.connect(buyer).claim(0, 0, proof1, 1, 1, proof2)).to.be.revertedWith(
+			'invalid item1 proof'
+		);
+	});
+
+	// it('Should revert with invalid item2 proof', async function () {
+	// 	await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
+	// 	await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('0.5') });
+	// 	const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(0, buyer.address));
+	// 	const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(100, buyer.address));
+	// 	await expect(redemptionContract.connect(buyer).claim(0, 0, proof1, 1, 1, proof2)).to.be.revertedWith(
+	// 		'invalid item2 proof'
+	// 	);
+	// });
+
+	it('Should claim tokens with valid merkle proof and return claims', async function () {
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(0, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		await redemptionContract.connect(buyer).claim(0, 0, proof1, 1, 1, proof2);
+		const claims = await redemptionContract.connect(owner).viewClaims(buyer.address);
+		console.log('Item 1 Token Id: %s', BigNumber.from(claims.item1.tokenId).toNumber());
+		console.log('Item 1 Loot Id: %s', BigNumber.from(claims.item1.lootId).toNumber());
+		console.log('Item 2 Token Id: %s', BigNumber.from(claims.item2.tokenId).toNumber());
+		console.log('Item 2 Loot Id: %s', BigNumber.from(claims.item2.lootId).toNumber());
 	});
 });

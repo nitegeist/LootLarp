@@ -3,23 +3,35 @@ const { ethers } = require('hardhat');
 const { MerkleTree } = require('merkletreejs');
 const { keccak256, bufferToHex } = require('ethereumjs-util');
 const { utils } = require('ethers');
+const tokens = require('./tokens.json');
+
+function hashToken(tokenId, account) {
+	return bufferToHex(utils.solidityKeccak256(['uint256', 'address'], [tokenId, account]));
+}
 
 describe('Public Mint', function () {
 	let owner, buyer, accounts;
 	let redemptionFactory, redemptionContract;
 	let maxSupply = 508;
 	let payment = ethers.utils.parseEther('0.25');
-	const merkleTree = {};
+	const preferredMinterMerkleTree = {};
+	const claimedTokenMerkleTree = {};
 
 	beforeEach(async function () {
 		redemptionFactory = await hre.ethers.getContractFactory('Redemption');
 		[owner, buyer, ...accounts] = await ethers.getSigners();
-		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
-		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
-		merkleTree.root = merkleTree.tree.getHexRoot();
-		redemptionContract = await redemptionFactory.deploy(0, 0, 0, merkleTree.root);
+		preferredMinterMerkleTree.leaves = accounts.map((account) =>
+			bufferToHex(utils.solidityKeccak256(['address'], [account.address]))
+		);
+		preferredMinterMerkleTree.tree = new MerkleTree(preferredMinterMerkleTree.leaves, keccak256, { sort: true });
+		preferredMinterMerkleTree.root = preferredMinterMerkleTree.tree.getHexRoot();
+		claimedTokenMerkleTree.leaves = Object.entries(tokens).map((token) => hashToken(...token));
+		claimedTokenMerkleTree.tree = new MerkleTree(claimedTokenMerkleTree.leaves, keccak256, { sort: true });
+		claimedTokenMerkleTree.root = claimedTokenMerkleTree.tree.getHexRoot();
+		redemptionContract = await redemptionFactory.deploy(0, 0, 0, preferredMinterMerkleTree.root);
 		await redemptionContract.deployed();
 		await redemptionContract.togglePublicClaim();
+		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
 	});
 
 	it('Should revert with not an admin', async function () {
