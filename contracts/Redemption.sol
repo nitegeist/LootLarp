@@ -12,7 +12,7 @@ import "hardhat/console.sol";
 /**
  * @title ERC721 Smart Contract for LootLARP
  *
- * @author Nitegeist, @carlfarterson
+ * @author @nitegeist, @carlfarterson
  */
 contract Redemption is
     IERC721Metadata,
@@ -80,15 +80,15 @@ contract Redemption is
     function initialize(bytes32 _root) external {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
         require(!initialized, "Already initialized");
-
         // Mint 8 legendaries to caller
         for (uint256 i = 0; i < TOTAL_LEGENDARY_TOKENS; i++) {
+            // console.log("Initialize Token Id: %s", _totalMinted.current());
+            _totalMinted.increment();
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, _msgSender());
-            _totalMinted.increment();
         }
         initialized = true;
         claimedTokensRoot = _root;
@@ -191,24 +191,30 @@ contract Redemption is
         uint256 _lootId2,
         bytes32[] calldata merkleProof2
     ) external {
+        require(initialized, "!initialized");
         require(_tokenId1 != _tokenId2, "Token ID args cannot be the same");
         require(_lootId1 != _lootId2, "Loot args cannot be the same");
 
         Claim storage item1 = item1Claims[_msgSender()];
         Claim storage item2 = item2Claims[_msgSender()];
-
-        if (item1.tokenId != 0) {
-            require(_tokenId2 != item1.tokenId, "_tokenId2 == item1.tokenId");
-            require(_lootId2 != item1.lootId, "_lootId2 == item1.lootId");
-        }
-        if (item2.tokenId != 0) {
+        console.log(
+            "Token 1 Id: %d, Owner of token 1: %s",
+            _tokenId1,
+            ownerOf(_tokenId1)
+        );
+        if (_tokenId1 != 0) {
             require(_tokenId1 != item2.tokenId, "_tokenId1 == item2.tokenId");
             require(_lootId1 != item2.lootId, "_lootId1 == item2.lootId");
-        }
-
-        if (item1.tokenId != 0 && item1.lootId != 0) {
-            require(item1.tokenId == 0, "item1 claimed");
             require(ownerOf(_tokenId1) == _msgSender(), "!owner of _tokenId1");
+            require(item1.tokenId == 0, "item1 claimed");
+        }
+        if (_tokenId2 != 0) {
+            require(_tokenId2 != item1.tokenId, "_tokenId2 == item1.tokenId");
+            require(_lootId2 != item1.lootId, "_lootId2 == item1.lootId");
+            require(ownerOf(_tokenId2) == _msgSender(), "!owner of _tokenId2");
+            require(item2.tokenId == 0, "item2 claimed");
+        }
+        if (_tokenId1 != 0 && _lootId1 != 0) {
             require(
                 isValidLootClaim(merkleProof1, _tokenId1, _msgSender()),
                 "invalid item1 proof"
@@ -216,10 +222,10 @@ contract Redemption is
             item1.tokenId = _tokenId1;
             item1.lootId = _lootId1;
         }
-        if (item2.tokenId != 0 && item2.lootId != 0) {
-            require(item1.tokenId != 0, "Cannot claim item2 before item1");
-            require(item2.tokenId == 0, "item2 claimed");
-            require(ownerOf(_tokenId2) == _msgSender(), "!owner of _tokenId2");
+        if (_tokenId2 != 0 && _lootId2 != 0) {
+            if (_tokenId1 == 0) {
+                require(item1.tokenId != 0, "Cannot claim item2 without item1");
+            }
             require(
                 isValidLootClaim(merkleProof2, _tokenId2, _msgSender()),
                 "invalid item2 proof"
@@ -227,6 +233,18 @@ contract Redemption is
             item2.tokenId = _tokenId2;
             item2.lootId = _lootId2;
         }
+    }
+
+    function viewBalance(address _account) external view returns (uint256) {
+        return balanceOf(_account);
+    }
+
+    function tokenOfOwner(address _account, uint256 index)
+        external
+        view
+        returns (uint256)
+    {
+        return tokenOfOwnerByIndex(_account, index);
     }
 
     function viewClaims(address _account)
@@ -290,18 +308,23 @@ contract Redemption is
         );
         require(_amount > 0, "Cannot mint 0");
         require(
+            _amount + _totalMinted.current() > TOTAL_LEGENDARY_TOKENS,
+            "Public Mint: Tokens already claimed"
+        );
+        require(
             _amount + balanceOf(_msgSender()) <= 2 &&
                 _amount + mintCount[_msgSender()] <= 2,
             "Max of two token claims per address"
         );
 
         for (uint256 i = 0; i < _amount; i++) {
+            _totalMinted.increment();
+            console.log("Public Mint Token Id: %s", _totalMinted.current());
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, _msgSender());
-            _totalMinted.increment();
         }
         mintCount[_msgSender()] += _amount;
     }
@@ -335,6 +358,10 @@ contract Redemption is
         );
         require(_amount > 0, "Cannot mint 0");
         require(
+            _amount + _totalMinted.current() > TOTAL_LEGENDARY_TOKENS,
+            "Private Mint: Tokens already claimed"
+        );
+        require(
             _amount + balanceOf(_msgSender()) <= 2 &&
                 _amount + mintCount[_msgSender()] <= 2,
             "Max of two token claims per address"
@@ -344,12 +371,13 @@ contract Redemption is
             "Total supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
+            _totalMinted.increment();
+            console.log("Private Mint Token Id: %s", _totalMinted.current());
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, _msgSender());
-            _totalMinted.increment();
         }
 
         mintCount[_msgSender()] += _amount;
@@ -376,6 +404,10 @@ contract Redemption is
         );
         require(_amount > 0, "Cannot mint 0");
         require(
+            _amount + _totalMinted.current() > TOTAL_LEGENDARY_TOKENS,
+            "Door Mint: Tokens already claimed"
+        );
+        require(
             _amount + balanceOf(recipient) <= 2 &&
                 _amount + mintCount[recipient] <= 2,
             "Max of two token claims per address"
@@ -389,13 +421,13 @@ contract Redemption is
             "Total supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
+            _totalMinted.increment();
+            console.log("Door Staff Mint Token Id: %s", _totalMinted.current());
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, recipient);
-
-            _totalMinted.increment();
             _doorMinted.increment();
         }
         payments[recipient] -= listingPrice;
