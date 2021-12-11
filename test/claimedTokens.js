@@ -110,7 +110,16 @@ describe('Claimed Tokens', function () {
 		);
 	});
 
-	it('Should claim tokens with valid merkle proof and return claims', async function () {
+	it('Should claim one token with valid merkle proof and return claim', async function () {
+		await redemptionContract.connect(buyer).publicMint(1, { value: payment });
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
+		await redemptionContract.connect(buyer).claim(9, 9, proof1, 0, 0, []);
+		const claims = await redemptionContract.connect(owner).viewClaims(buyer.address);
+		console.log('Item 1 Token Id: %s', BigNumber.from(claims.item1.tokenId).toNumber());
+		console.log('Item 1 Loot Id: %s', BigNumber.from(claims.item1.lootId).toNumber());
+	});
+
+	it('Should claim two tokens with valid merkle proof and return claims', async function () {
 		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('0.5') });
 		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
 		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
