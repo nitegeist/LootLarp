@@ -13,7 +13,7 @@ describe('Private Mint', function () {
 	let owner, buyer, accounts, addresses;
 	let redemptionFactory, redemptionContract;
 	let maxSupply = 508;
-	let payment = utils.parseEther('0.25');
+	let payment = utils.parseEther('0.5');
 	const preferredMinterMerkleTree = {};
 	const claimedTokenMerkleTree = {};
 
@@ -39,7 +39,7 @@ describe('Private Mint', function () {
 		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [accounts[0].address]));
 		const proof = preferredMinterMerkleTree.tree.getHexProof(leaf);
 		await expect(
-			redemptionContract.connect(accounts[0]).privateMint(2, proof, { value: utils.parseEther('0.5') })
+			redemptionContract.connect(accounts[0]).privateMint(2, proof, { value: utils.parseEther('1') })
 		).to.be.revertedWith('Private Mint: Private mint is not active');
 	});
 
@@ -51,7 +51,7 @@ describe('Private Mint', function () {
 		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
 		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [accounts[0].address]));
 		const proof = preferredMinterMerkleTree.tree.getHexProof(leaf);
-		await redemptionContract.connect(accounts[0]).privateMint(2, proof, { value: utils.parseEther('0.5') });
+		await redemptionContract.connect(accounts[0]).privateMint(2, proof, { value: utils.parseEther('1') });
 		expect(await redemptionContract.balanceOf(accounts[0].address)).to.equal(2);
 	});
 

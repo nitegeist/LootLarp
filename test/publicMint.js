@@ -13,7 +13,7 @@ describe('Public Mint', function () {
 	let owner, buyer, accounts;
 	let redemptionFactory, redemptionContract;
 	let maxSupply = 508;
-	let payment = ethers.utils.parseEther('0.25');
+	let payment = ethers.utils.parseEther('0.5');
 	const preferredMinterMerkleTree = {};
 	const claimedTokenMerkleTree = {};
 
@@ -46,13 +46,13 @@ describe('Public Mint', function () {
 	});
 
 	it('Should successfully mint two tokens', async function () {
-		await redemptionContract.connect(buyer).publicMint(2, { value: ethers.utils.parseEther('0.5') });
+		await redemptionContract.connect(buyer).publicMint(2, { value: ethers.utils.parseEther('1') });
 		expect(await redemptionContract.balanceOf(buyer.address)).to.equal(2);
 	});
 
 	it('Should revert with max amount', async function () {
 		await expect(
-			redemptionContract.connect(buyer).publicMint(3, { value: ethers.utils.parseEther('0.75') })
+			redemptionContract.connect(buyer).publicMint(3, { value: ethers.utils.parseEther('1.5') })
 		).to.be.revertedWith('Max of two token claims per address');
 	});
 

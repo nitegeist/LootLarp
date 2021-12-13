@@ -29,7 +29,7 @@ contract Redemption is
         keccak256("PREFERRED_MINTER_ROLE");
     Counters.Counter private _totalMinted;
     Counters.Counter private _doorMinted;
-    uint256 listingPrice = 25 * 10e15; // 0.25 ETH
+    uint256 listingPrice = 5 * 10e16; // 0.5 ETH
     mapping(address => uint256) payments;
     mapping(address => uint256) mintCount;
     struct Claim {

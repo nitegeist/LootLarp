@@ -22,7 +22,7 @@ describe('Deployment', function () {
 
 	it('Successfully deploys contract', async function () {
 		expect(await redemptionContract.publicClaim()).to.be.false;
-		expect(await redemptionContract.getListingPrice()).to.equal(ethers.utils.parseEther('0.25'));
+		expect(await redemptionContract.getListingPrice()).to.equal(ethers.utils.parseEther('0.5'));
 		expect(await redemptionContract.getAvailableSupply()).to.equal(maxSupply);
 	});
 	it('Should set listing price to 0.3', async function () {

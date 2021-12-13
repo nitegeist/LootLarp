@@ -14,7 +14,7 @@ describe('Claimed Tokens', function () {
 	let redemptionFactory, redemptionContract;
 	let maxSupply = 508;
 	let rareSupply = 8;
-	let payment = ethers.utils.parseEther('0.25');
+	let payment = ethers.utils.parseEther('0.5');
 	const preferredMinterMerkleTree = {};
 	const claimedTokenMerkleTree = {};
 
@@ -64,7 +64,7 @@ describe('Claimed Tokens', function () {
 	});
 
 	it('Should revert with not owner of token id 1', async function () {
-		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('0.5') });
+		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
 		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
 		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
 		await expect(redemptionContract.connect(accounts[0]).claim(9, 9, proof1, 10, 10, proof2)).to.be.revertedWith(
@@ -79,7 +79,7 @@ describe('Claimed Tokens', function () {
 	});
 
 	it('Should revert with invalid item1 proof', async function () {
-		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('0.5') });
+		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
 		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
 		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
 		console.log('Owner: %s', owner.address);
@@ -95,7 +95,7 @@ describe('Claimed Tokens', function () {
 	});
 
 	it('Should revert with invalid item2 proof', async function () {
-		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('0.5') });
+		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
 		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
 		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
 		console.log('Owner: %s', owner.address);
@@ -120,7 +120,7 @@ describe('Claimed Tokens', function () {
 	});
 
 	it('Should claim two tokens with valid merkle proof and return claims', async function () {
-		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('0.5') });
+		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
 		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
 		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
 		await redemptionContract.connect(buyer).claim(9, 9, proof1, 10, 10, proof2);

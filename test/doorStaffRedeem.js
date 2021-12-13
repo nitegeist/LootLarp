@@ -13,7 +13,7 @@ describe('Door Staff Redeem', function () {
 	let owner, buyer, doorStaff, accounts;
 	let redemptionFactory, redemptionContract;
 	let maxSupply = 508;
-	let payment = utils.parseEther('0.25');
+	let payment = utils.parseEther('0.5');
 	const preferredMinterMerkleTree = {};
 	const claimedTokenMerkleTree = {};
 
@@ -35,7 +35,7 @@ describe('Door Staff Redeem', function () {
 
 	it('Should revert with door staff redeem not active', async function () {
 		await expect(
-			redemptionContract.connect(doorStaff).doorStaffRedeem(2, buyer.address, { value: utils.parseEther('0.5') })
+			redemptionContract.connect(doorStaff).doorStaffRedeem(2, buyer.address, { value: utils.parseEther('1') })
 		).to.be.revertedWith('Door Mint: Door staff mint is not active');
 	});
 
@@ -47,14 +47,14 @@ describe('Door Staff Redeem', function () {
 		await redemptionContract.deployed();
 		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
 		await redemptionContract.grantRole(redemptionContract.MINTER_ROLE(), doorStaff.address);
-		await redemptionContract.connect(buyer).payDoorStaff(2, { value: utils.parseEther('0.5') });
-		await redemptionContract.connect(doorStaff).doorStaffRedeem(2, buyer.address, { value: utils.parseEther('0.5') });
+		await redemptionContract.connect(buyer).payDoorStaff(2, { value: utils.parseEther('1') });
+		await redemptionContract.connect(doorStaff).doorStaffRedeem(2, buyer.address, { value: utils.parseEther('1') });
 		expect(await redemptionContract.balanceOf(buyer.address)).to.equal(2);
 	});
 
 	it('Should refund buyer their ether', async function () {
 		await redemptionContract.grantRole(redemptionContract.MINTER_ROLE(), doorStaff.address);
-		await redemptionContract.connect(buyer).payDoorStaff(2, { value: utils.parseEther('0.5') });
+		await redemptionContract.connect(buyer).payDoorStaff(2, { value: utils.parseEther('1') });
 		expect(
 			await redemptionContract
 				.connect(doorStaff)
