@@ -82,13 +82,6 @@ describe('Claimed Tokens', function () {
 		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
 		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
 		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
-		console.log('Owner: %s', owner.address);
-		const balance = await redemptionContract.viewBalance(owner.address);
-		console.log('Owner Tokens: %s', balance);
-		for (let i = 0; i < rareSupply; i++) {
-			const token = await redemptionContract.tokenOfOwner(owner.address, i);
-			console.log('Owner Token Id: %d', token);
-		}
 		await expect(redemptionContract.connect(buyer).claim(9, 9, proof2, 10, 10, proof1)).to.be.revertedWith(
 			'invalid item1 proof'
 		);
@@ -98,13 +91,6 @@ describe('Claimed Tokens', function () {
 		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
 		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
 		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
-		console.log('Owner: %s', owner.address);
-		const balance = await redemptionContract.viewBalance(owner.address);
-		console.log('Owner Tokens: %s', balance);
-		for (let i = 0; i < rareSupply; i++) {
-			const token = await redemptionContract.tokenOfOwner(owner.address, i);
-			console.log('Owner Token Id: %d', token);
-		}
 		await expect(redemptionContract.connect(buyer).claim(9, 9, proof1, 10, 10, proof1)).to.be.revertedWith(
 			'invalid item2 proof'
 		);

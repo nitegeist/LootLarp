@@ -82,7 +82,6 @@ contract Redemption is
         require(!initialized, "Already initialized");
         // Mint 8 legendaries to caller
         for (uint256 i = 0; i < TOTAL_LEGENDARY_TOKENS; i++) {
-            // console.log("Initialize Token Id: %s", _totalMinted.current());
             _totalMinted.increment();
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
@@ -120,7 +119,6 @@ contract Redemption is
                 "This address has already been assigned this role"
             );
             grantRole(PREFERRED_MINTER_ROLE, _accounts[i]);
-            // console.log("granted account %d: %s", i, _accounts[i]);
         }
     }
 
@@ -139,7 +137,6 @@ contract Redemption is
                 "This address does not have this role"
             );
             revokeRole(PREFERRED_MINTER_ROLE, _accounts[i]);
-            // console.log("revoked account %d: %s", i, _accounts[i]);
         }
     }
 
@@ -148,19 +145,6 @@ contract Redemption is
         view
         returns (bool)
     {
-        // for (uint256 i = 0; i < proof.length; i++) {
-        //     console.logBytes32(proof[i]);
-        // }
-        // console.logBytes32(keccak256(abi.encodePacked(_address)));
-        // console.logBytes32(root);
-        // console.log(
-        //     "is pref minter: %s",
-        //     MerkleProof.verify(
-        //         proof,
-        //         root,
-        //         keccak256(abi.encodePacked(_address))
-        //     )
-        // );
         return
             MerkleProof.verify(
                 proof,
@@ -197,11 +181,6 @@ contract Redemption is
 
         Claim storage item1 = item1Claims[_msgSender()];
         Claim storage item2 = item2Claims[_msgSender()];
-        console.log(
-            "Token 1 Id: %d, Owner of token 1: %s",
-            _tokenId1,
-            ownerOf(_tokenId1)
-        );
         if (_tokenId1 != 0) {
             require(_tokenId1 != item2.tokenId, "_tokenId1 == item2.tokenId");
             require(_lootId1 != item2.lootId, "_lootId1 == item2.lootId");
@@ -235,18 +214,6 @@ contract Redemption is
         }
     }
 
-    function viewBalance(address _account) external view returns (uint256) {
-        return balanceOf(_account);
-    }
-
-    function tokenOfOwner(address _account, uint256 index)
-        external
-        view
-        returns (uint256)
-    {
-        return tokenOfOwnerByIndex(_account, index);
-    }
-
     function viewClaims(address _account)
         external
         view
@@ -268,12 +235,10 @@ contract Redemption is
         );
         require(block.timestamp > endTime, "Private claim has not ended");
         publicClaim = !publicClaim;
-        console.log("Public Claim: %s", publicClaim);
     }
 
     // Gets listing price
     function getListingPrice() external view returns (uint256) {
-        console.log("Get Listing Price: %s", listingPrice);
         return listingPrice;
     }
 
@@ -289,13 +254,10 @@ contract Redemption is
             "Must have admin role to set price"
         );
         listingPrice = _wei;
-        console.log("Set Listing Price: %s", listingPrice);
     }
 
     // Public mint function
     function publicMint(uint256 _amount) external payable nonReentrant {
-        console.log("Public Mint: claim %s", publicClaim);
-        console.log("balance of %s: %d", _msgSender(), balanceOf(_msgSender()));
         require(initialized, "!initialized");
         require(publicClaim, "Public mint is not active");
         require(
@@ -319,7 +281,7 @@ contract Redemption is
 
         for (uint256 i = 0; i < _amount; i++) {
             _totalMinted.increment();
-            console.log("Public Mint Token Id: %s", _totalMinted.current());
+
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
@@ -335,10 +297,6 @@ contract Redemption is
         payable
         nonReentrant
     {
-        console.log(
-            "Private mint active: %s",
-            block.timestamp > startTime && block.timestamp < endTime
-        );
         require(initialized, "!initialized");
         require(
             block.timestamp > startTime && block.timestamp < endTime,
@@ -372,14 +330,13 @@ contract Redemption is
         );
         for (uint256 i = 0; i < _amount; i++) {
             _totalMinted.increment();
-            console.log("Private Mint Token Id: %s", _totalMinted.current());
+
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
             );
             _mintToken(tokenId, tokenUri, _msgSender());
         }
-
         mintCount[_msgSender()] += _amount;
     }
 
@@ -422,7 +379,7 @@ contract Redemption is
         );
         for (uint256 i = 0; i < _amount; i++) {
             _totalMinted.increment();
-            console.log("Door Staff Mint Token Id: %s", _totalMinted.current());
+
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
