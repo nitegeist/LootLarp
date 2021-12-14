@@ -48,26 +48,26 @@ describe('Claimed Tokens', function () {
 	});
 
 	it('Should revert with same token Id for item1 & item2', async function () {
-		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
-		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
-		await expect(redemptionContract.connect(buyer).claim(9, 9, proof1, 9, 10, proof2)).to.be.revertedWith(
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(2, buyer.address));
+		await expect(redemptionContract.connect(buyer).claim(1, 1, proof1, 1, 2, proof2)).to.be.revertedWith(
 			'Token ID args cannot be the same'
 		);
 	});
 
 	it('Should revert with same loot Id for item1 & item2', async function () {
-		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
-		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
-		await expect(redemptionContract.connect(buyer).claim(9, 9, proof1, 10, 9, proof2)).to.be.revertedWith(
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(2, buyer.address));
+		await expect(redemptionContract.connect(buyer).claim(1, 1, proof1, 2, 1, proof2)).to.be.revertedWith(
 			'Loot args cannot be the same'
 		);
 	});
 
 	it('Should revert with not owner of token id 1', async function () {
 		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
-		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
-		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
-		await expect(redemptionContract.connect(accounts[0]).claim(9, 9, proof1, 10, 10, proof2)).to.be.revertedWith(
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(2, buyer.address));
+		await expect(redemptionContract.connect(accounts[0]).claim(1, 1, proof1, 2, 2, proof2)).to.be.revertedWith(
 			'!owner of _tokenId1'
 		);
 	});
@@ -80,26 +80,26 @@ describe('Claimed Tokens', function () {
 
 	it('Should revert with invalid item1 proof', async function () {
 		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
-		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
-		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
-		await expect(redemptionContract.connect(buyer).claim(9, 9, proof2, 10, 10, proof1)).to.be.revertedWith(
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(2, buyer.address));
+		await expect(redemptionContract.connect(buyer).claim(1, 1, proof2, 2, 2, proof1)).to.be.revertedWith(
 			'invalid item1 proof'
 		);
 	});
 
 	it('Should revert with invalid item2 proof', async function () {
 		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
-		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
-		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
-		await expect(redemptionContract.connect(buyer).claim(9, 9, proof1, 10, 10, proof1)).to.be.revertedWith(
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(2, buyer.address));
+		await expect(redemptionContract.connect(buyer).claim(1, 1, proof1, 2, 2, proof1)).to.be.revertedWith(
 			'invalid item2 proof'
 		);
 	});
 
 	it('Should claim one token with valid merkle proof and return claim', async function () {
 		await redemptionContract.connect(buyer).publicMint(1, { value: payment });
-		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
-		await redemptionContract.connect(buyer).claim(9, 9, proof1, 0, 0, []);
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		await redemptionContract.connect(buyer).claim(1, 1, proof1, 0, 0, []);
 		const claims = await redemptionContract.connect(owner).viewClaims(buyer.address);
 		console.log('Item 1 Token Id: %s', BigNumber.from(claims.item1.tokenId).toNumber());
 		console.log('Item 1 Loot Id: %s', BigNumber.from(claims.item1.lootId).toNumber());
@@ -107,9 +107,9 @@ describe('Claimed Tokens', function () {
 
 	it('Should claim two tokens with valid merkle proof and return claims', async function () {
 		await redemptionContract.connect(buyer).publicMint(2, { value: utils.parseEther('1') });
-		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(9, buyer.address));
-		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(10, buyer.address));
-		await redemptionContract.connect(buyer).claim(9, 9, proof1, 10, 10, proof2);
+		const proof1 = claimedTokenMerkleTree.tree.getHexProof(hashToken(1, buyer.address));
+		const proof2 = claimedTokenMerkleTree.tree.getHexProof(hashToken(2, buyer.address));
+		await redemptionContract.connect(buyer).claim(1, 1, proof1, 2, 2, proof2);
 		const claims = await redemptionContract.connect(owner).viewClaims(buyer.address);
 		console.log('Item 1 Token Id: %s', BigNumber.from(claims.item1.tokenId).toNumber());
 		console.log('Item 1 Loot Id: %s', BigNumber.from(claims.item1.lootId).toNumber());

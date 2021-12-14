@@ -42,7 +42,7 @@ describe('Door Staff Redeem', function () {
 	it('Should activate door staff redeeem and redeem tokens for buyer', async function () {
 		const now = new Date();
 		const start = (now.getTime() / 1000).toFixed(0);
-		const end = (now.setSeconds(now.getSeconds() + 60) / 1000).toFixed(0);
+		const end = (now.setSeconds(now.getSeconds() + 120) / 1000).toFixed(0);
 		redemptionContract = await redemptionFactory.deploy(0, start, end, preferredMinterMerkleTree.root);
 		await redemptionContract.deployed();
 		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);

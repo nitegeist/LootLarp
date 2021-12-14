@@ -47,6 +47,9 @@ contract Redemption is
     uint256 private constant TOTAL_LEGENDARY_TOKENS = 8;
     uint256 private constant TOTAL_SUPPLY = 508; // 500 + legendaries
 
+    // variable token amount
+    uint256 private ADDITIONAL_SUPPLY;
+
     // baseUri
     string public constant BASE_URI = "ipfs://";
 
@@ -80,15 +83,6 @@ contract Redemption is
     function initialize(bytes32 _root) external {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
         require(!initialized, "Already initialized");
-        // Mint 8 legendaries to caller
-        for (uint256 i = 0; i < TOTAL_LEGENDARY_TOKENS; i++) {
-            _totalMinted.increment();
-            uint256 tokenId = _totalMinted.current();
-            string memory tokenUri = string(
-                abi.encodePacked(BASE_URI, tokenId)
-            );
-            _mintToken(tokenId, tokenUri, _msgSender());
-        }
         initialized = true;
         claimedTokensRoot = _root;
     }
@@ -102,6 +96,10 @@ contract Redemption is
         returns (string memory)
     {
         return BASE_URI;
+    }
+
+    function createAdditionalSupply(uint256 _amount) external payable {
+        ADDITIONAL_SUPPLY = _amount;
     }
 
     // Batch grants preferred minter role
@@ -256,6 +254,62 @@ contract Redemption is
         listingPrice = _wei;
     }
 
+    function mintLegendary() external payable nonReentrant {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
+        require(initialized, "!initialized");
+        require(
+            _totalMinted.current() <= TOTAL_LEGENDARY_TOKENS,
+            "All legendaries minted"
+        );
+        // Mint legendary to caller
+        _totalMinted.increment();
+        uint256 tokenId = _totalMinted.current();
+        console.log("Legendary Token: %d", tokenId);
+        string memory tokenUri = string(abi.encodePacked(BASE_URI, tokenId));
+        _mintToken(tokenId, tokenUri, _msgSender());
+    }
+
+    // Additional token mint
+    function additionalMint(uint256 _amount) external payable nonReentrant {
+        require(initialized, "!initialized");
+        require(!publicClaim, "Public mint is active");
+        require(
+            block.timestamp > endTime,
+            "Additional Mint: Private mint is active"
+        );
+        require(
+            block.timestamp > endTimeDoorStaff,
+            "Additional Mint: Door staff mint is active"
+        );
+        require(
+            listingPrice * _amount == msg.value,
+            "Additional Mint: Incorrect payment amount"
+        );
+        require(
+            _amount + _totalMinted.current() >= TOTAL_SUPPLY,
+            "Total claimable supply not reached"
+        );
+        require(
+            _amount + _totalMinted.current() <= ADDITIONAL_SUPPLY,
+            "Out of additional tokens"
+        );
+        require(_amount > 0, "Cannot mint 0");
+        require(
+            _amount + balanceOf(_msgSender()) <= 2 &&
+                _amount + mintCount[_msgSender()] <= 2,
+            "Max of two token claims per address"
+        );
+        for (uint256 i = 0; i < _amount; i++) {
+            _totalMinted.increment();
+            uint256 tokenId = _totalMinted.current();
+            string memory tokenUri = string(
+                abi.encodePacked(BASE_URI, tokenId)
+            );
+            _mintToken(tokenId, tokenUri, _msgSender());
+        }
+        mintCount[_msgSender()] += _amount;
+    }
+
     // Public mint function
     function publicMint(uint256 _amount) external payable nonReentrant {
         require(initialized, "!initialized");
@@ -270,10 +324,6 @@ contract Redemption is
         );
         require(_amount > 0, "Cannot mint 0");
         require(
-            _amount + _totalMinted.current() > TOTAL_LEGENDARY_TOKENS,
-            "Public Mint: Tokens already claimed"
-        );
-        require(
             _amount + balanceOf(_msgSender()) <= 2 &&
                 _amount + mintCount[_msgSender()] <= 2,
             "Max of two token claims per address"
@@ -281,7 +331,6 @@ contract Redemption is
 
         for (uint256 i = 0; i < _amount; i++) {
             _totalMinted.increment();
-
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
@@ -316,10 +365,6 @@ contract Redemption is
         );
         require(_amount > 0, "Cannot mint 0");
         require(
-            _amount + _totalMinted.current() > TOTAL_LEGENDARY_TOKENS,
-            "Private Mint: Tokens already claimed"
-        );
-        require(
             _amount + balanceOf(_msgSender()) <= 2 &&
                 _amount + mintCount[_msgSender()] <= 2,
             "Max of two token claims per address"
@@ -330,7 +375,6 @@ contract Redemption is
         );
         for (uint256 i = 0; i < _amount; i++) {
             _totalMinted.increment();
-
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)
@@ -361,10 +405,6 @@ contract Redemption is
         );
         require(_amount > 0, "Cannot mint 0");
         require(
-            _amount + _totalMinted.current() > TOTAL_LEGENDARY_TOKENS,
-            "Door Mint: Tokens already claimed"
-        );
-        require(
             _amount + balanceOf(recipient) <= 2 &&
                 _amount + mintCount[recipient] <= 2,
             "Max of two token claims per address"
@@ -379,7 +419,6 @@ contract Redemption is
         );
         for (uint256 i = 0; i < _amount; i++) {
             _totalMinted.increment();
-
             uint256 tokenId = _totalMinted.current();
             string memory tokenUri = string(
                 abi.encodePacked(BASE_URI, tokenId)

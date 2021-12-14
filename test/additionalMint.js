@@ -1,0 +1,94 @@
+const { expect } = require('chai');
+const { ethers } = require('hardhat');
+const { MerkleTree } = require('merkletreejs');
+const { keccak256, bufferToHex } = require('ethereumjs-util');
+const { utils } = require('ethers');
+const tokens = require('./tokens.json');
+
+function hashToken(tokenId, account) {
+	return bufferToHex(utils.solidityKeccak256(['uint256', 'address'], [tokenId, account]));
+}
+
+describe('Additional Mint', function () {
+	let owner, buyer, accounts;
+	let redemptionFactory, redemptionContract;
+	let maxSupply = 508;
+	let payment = ethers.utils.parseEther('0.5');
+	const preferredMinterMerkleTree = {};
+	const claimedTokenMerkleTree = {};
+
+	beforeEach(async function () {
+		redemptionFactory = await hre.ethers.getContractFactory('Redemption');
+		[owner, buyer, ...accounts] = await ethers.getSigners();
+		preferredMinterMerkleTree.leaves = accounts.map((account) =>
+			bufferToHex(utils.solidityKeccak256(['address'], [account.address]))
+		);
+		preferredMinterMerkleTree.tree = new MerkleTree(preferredMinterMerkleTree.leaves, keccak256, { sort: true });
+		preferredMinterMerkleTree.root = preferredMinterMerkleTree.tree.getHexRoot();
+		claimedTokenMerkleTree.leaves = Object.entries(tokens).map((token) => hashToken(...token));
+		claimedTokenMerkleTree.tree = new MerkleTree(claimedTokenMerkleTree.leaves, keccak256, { sort: true });
+		claimedTokenMerkleTree.root = claimedTokenMerkleTree.tree.getHexRoot();
+		redemptionContract = await redemptionFactory.deploy(0, 0, 0, preferredMinterMerkleTree.root);
+		await redemptionContract.deployed();
+		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
+	});
+
+	it('Should revert with not an admin', async function () {
+		await expect(redemptionContract.connect(buyer).mintLegendary()).to.be.revertedWith('Must be an admin');
+	});
+
+	it('Should revert with all legendaries minted', async function () {
+		for (let i = 1; i < 8; i++) {
+			await redemptionContract.connect(owner).mintLegendary();
+			if (i === 8) {
+				await expect(redemptionContract.connect(owner).mintLegendary()).to.be.revertedWith('All legendaries minted');
+			}
+		}
+	});
+
+	it('Should mint a legendary token', async function () {
+		await redemptionContract.connect(owner).mintLegendary();
+		expect(await redemptionContract.balanceOf(owner.address)).to.equal(1);
+	});
+
+	it('Should revert with public claim is active', async function () {
+		await redemptionContract.connect(owner).togglePublicClaim();
+		await expect(
+			redemptionContract.connect(buyer).additionalMint(2, { value: utils.parseEther('1') })
+		).to.be.revertedWith('Public mint is active');
+	});
+
+	it('Should revert with private mint active', async function () {
+		const start = (new Date().getTime() / 1000).toFixed(0);
+		redemptionContract = await redemptionFactory.deploy(start, 0, 0, preferredMinterMerkleTree.root);
+		await redemptionContract.deployed();
+		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
+		await expect(
+			redemptionContract.connect(buyer).additionalMint(2, { value: utils.parseEther('1') })
+		).to.be.revertedWith('Additional Mint: Private mint is active');
+	});
+
+	it('Should revert with door staff mint active', async function () {
+		const now = new Date();
+		const start = (now.getTime() / 1000).toFixed(0);
+		const end = (now.setSeconds(now.getSeconds() + 60) / 1000).toFixed(0);
+		redemptionContract = await redemptionFactory.deploy(0, start, end, preferredMinterMerkleTree.root);
+		await redemptionContract.deployed();
+		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
+		await expect(
+			redemptionContract.connect(buyer).additionalMint(2, { value: utils.parseEther('1') })
+		).to.be.revertedWith('Additional Mint: Door staff mint is active');
+	});
+
+	it('Should revert with total claimable supply not reached', async function () {
+		await expect(
+			redemptionContract.connect(buyer).additionalMint(2, { value: utils.parseEther('1') })
+		).to.be.revertedWith('Total claimable supply not reached');
+	});
+
+	it('Should revert with incorrect payment amount', async function () {
+		await expect(
+			redemptionContract.connect(buyer).additionalMint(1, { value: ethers.utils.parseEther('0.3') })
+		).to.be.revertedWith('Additional Mint: Incorrect payment amount');
+	});
+});
