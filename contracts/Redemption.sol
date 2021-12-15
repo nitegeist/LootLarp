@@ -28,6 +28,7 @@ contract Redemption is
     bytes32 public constant PREFERRED_MINTER_ROLE =
         keccak256("PREFERRED_MINTER_ROLE");
     Counters.Counter private _totalMinted;
+    Counters.Counter private _rareMinted;
     Counters.Counter private _doorMinted;
     uint256 listingPrice = 5 * 10e16; // 0.5 ETH
     mapping(address => uint256) payments;
@@ -43,12 +44,9 @@ contract Redemption is
     bytes4 private constant INTERFACE_ID_ERC2981 = 0x2a55205a;
 
     // Token ID constants
-    uint256 private constant DOOR_SUPPLY = 100;
     uint256 private constant TOTAL_LEGENDARY_TOKENS = 8;
-    uint256 private constant TOTAL_SUPPLY = 508; // 500 + legendaries
 
-    // variable token amount
-    uint256 private ADDITIONAL_SUPPLY;
+    uint256 private maxSupply = 508; // 500 + legendaries
 
     // baseUri
     string public constant BASE_URI = "ipfs://";
@@ -68,16 +66,21 @@ contract Redemption is
     bool public initialized;
 
     constructor(
-        uint256 _startTime,
         uint256 _startTimeDoorStaff,
         uint256 _endTimeDoorStaff,
         bytes32 _prefferedMinterRoot
     ) ERC721PresetMinterPauserAutoId("Redemption", "RDMN", BASE_URI) {
         prefferedMinterRoot = _prefferedMinterRoot;
-        startTime = _startTime;
-        endTime = _startTime + 1 days;
+        startTime = block.timestamp;
+        endTime = block.timestamp + 2 days;
         startTimeDoorStaff = _startTimeDoorStaff;
         endTimeDoorStaff = _endTimeDoorStaff;
+    }
+
+    function transferAdmin(address _account) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Not an admin");
+        _setupRole(DEFAULT_ADMIN_ROLE, _account);
+        revokeRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
     function initialize(bytes32 _root) external {
@@ -98,8 +101,14 @@ contract Redemption is
         return BASE_URI;
     }
 
-    function createAdditionalSupply(uint256 _amount) external payable {
-        ADDITIONAL_SUPPLY = _amount;
+    function setMaxSupply(uint256 _amount) external payable {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
+        maxSupply = maxSupply + _amount;
+    }
+
+    function getMaxSupply() external view returns (uint256) {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
+        return maxSupply;
     }
 
     // Batch grants preferred minter role
@@ -217,6 +226,7 @@ contract Redemption is
         view
         returns (Claim memory item1, Claim memory item2)
     {
+        require(initialized, "!initialized");
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "Must have admin role to view claims"
@@ -242,7 +252,7 @@ contract Redemption is
 
     // Get available supply
     function getAvailableSupply() external view returns (uint256) {
-        return TOTAL_SUPPLY - _totalMinted.current();
+        return maxSupply - _totalMinted.current();
     }
 
     // Sets listing price in wei
@@ -254,24 +264,34 @@ contract Redemption is
         listingPrice = _wei;
     }
 
-    function mintLegendary() external payable nonReentrant {
-        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
-        require(initialized, "!initialized");
+    function mintLegendary(uint256 _amount) external payable nonReentrant {
         require(
-            _totalMinted.current() <= TOTAL_LEGENDARY_TOKENS,
+            hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
+            "Must have admin role to mint"
+        );
+        require(_amount > 0, "Cannot mint 0");
+        require(
+            _amount + _rareMinted.current() <= TOTAL_LEGENDARY_TOKENS,
             "All legendaries minted"
         );
-        // Mint legendary to caller
-        _totalMinted.increment();
-        uint256 tokenId = _totalMinted.current();
-        console.log("Legendary Token: %d", tokenId);
-        string memory tokenUri = string(abi.encodePacked(BASE_URI, tokenId));
-        _mintToken(tokenId, tokenUri, _msgSender());
+        require(
+            _amount + _totalMinted.current() <= maxSupply,
+            "Max supply reached"
+        );
+        for (uint256 i = 0; i < _amount; i++) {
+            // Mint legendary to caller
+            _totalMinted.increment();
+            uint256 tokenId = _totalMinted.current();
+            string memory tokenUri = string(
+                abi.encodePacked(BASE_URI, tokenId)
+            );
+            _mintToken(tokenId, tokenUri, _msgSender());
+            _rareMinted.increment();
+        }
     }
 
     // Additional token mint
     function additionalMint(uint256 _amount) external payable nonReentrant {
-        require(initialized, "!initialized");
         require(!publicClaim, "Public mint is active");
         require(
             block.timestamp > endTime,
@@ -286,12 +306,8 @@ contract Redemption is
             "Additional Mint: Incorrect payment amount"
         );
         require(
-            _amount + _totalMinted.current() >= TOTAL_SUPPLY,
-            "Total claimable supply not reached"
-        );
-        require(
-            _amount + _totalMinted.current() <= ADDITIONAL_SUPPLY,
-            "Out of additional tokens"
+            _amount + _totalMinted.current() <= maxSupply,
+            "Total claimable supply reached"
         );
         require(_amount > 0, "Cannot mint 0");
         require(
@@ -312,14 +328,13 @@ contract Redemption is
 
     // Public mint function
     function publicMint(uint256 _amount) external payable nonReentrant {
-        require(initialized, "!initialized");
         require(publicClaim, "Public mint is not active");
         require(
             listingPrice * _amount == msg.value,
             "Public Mint: Incorrect payment amount"
         );
         require(
-            _amount + _totalMinted.current() <= TOTAL_SUPPLY,
+            _amount + _totalMinted.current() <= maxSupply,
             "Total claimable supply reached"
         );
         require(_amount > 0, "Cannot mint 0");
@@ -346,7 +361,6 @@ contract Redemption is
         payable
         nonReentrant
     {
-        require(initialized, "!initialized");
         require(
             block.timestamp > startTime && block.timestamp < endTime,
             "Private Mint: Private mint is not active"
@@ -370,7 +384,7 @@ contract Redemption is
             "Max of two token claims per address"
         );
         require(
-            _amount + _totalMinted.current() <= TOTAL_SUPPLY,
+            _amount + _totalMinted.current() <= maxSupply,
             "Total supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
@@ -410,11 +424,7 @@ contract Redemption is
             "Max of two token claims per address"
         );
         require(
-            _amount + _doorMinted.current() <= DOOR_SUPPLY,
-            "Out of tokens for door staff"
-        );
-        require(
-            _amount + _totalMinted.current() <= TOTAL_SUPPLY,
+            _amount + _totalMinted.current() <= maxSupply,
             "Total supply reached"
         );
         for (uint256 i = 0; i < _amount; i++) {
