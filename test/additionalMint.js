@@ -68,9 +68,9 @@ describe('Additional Mint', function () {
 	});
 
 	it('Should revert with door staff mint active', async function () {
-		const now = new Date(new Date().getTime() + 49 * 60 * 60 * 1000);
+		const now = new Date(new Date().getTime() + 49 * 3600 * 1000);
 		const start = (now.getTime() / 1000).toFixed(0);
-		const end = (now.setHours(now.getHours() + 72) / 1000).toFixed(0);
+		const end = (now.setSeconds(now.getSeconds() + 3600 * 72) / 1000).toFixed(0);
 		redemptionContract = await redemptionFactory.deploy(start, end, preferredMinterMerkleTree.root);
 		await redemptionContract.deployed();
 		await network.provider.request({

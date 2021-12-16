@@ -297,6 +297,9 @@ contract Redemption is
             block.timestamp > endTime,
             "Additional Mint: Private mint is active"
         );
+        console.log(block.timestamp > endTimeDoorStaff);
+        console.log(block.timestamp);
+        console.log(endTimeDoorStaff);
         require(
             block.timestamp > endTimeDoorStaff,
             "Additional Mint: Door staff mint is active"
@@ -404,6 +407,11 @@ contract Redemption is
         payable
         nonReentrant
     {
+        console.log(block.timestamp > startTimeDoorStaff);
+        console.log(block.timestamp < endTimeDoorStaff);
+        console.log(block.timestamp);
+        console.log(endTimeDoorStaff);
+        require(block.timestamp > endTime, "Door Mint: Private mint is active");
         require(
             block.timestamp > startTimeDoorStaff &&
                 block.timestamp < endTimeDoorStaff,

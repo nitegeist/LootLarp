@@ -2,8 +2,7 @@ const { MerkleTree } = require('merkletreejs');
 const { expect } = require('chai');
 const { ethers, network } = require('hardhat');
 const { keccak256, bufferToHex } = require('ethereumjs-util');
-const { utils, BigNumber } = require('ethers');
-const tokens = require('./tokens.json');
+const { utils } = require('ethers');
 
 describe('Door Staff Redeem', function () {
 	let owner, buyer, doorStaff, accounts;
@@ -23,15 +22,22 @@ describe('Door Staff Redeem', function () {
 	});
 
 	it('Should revert with door staff redeem not active', async function () {
+		await network.provider.request({
+			method: 'evm_increaseTime',
+			params: [3600 * 49],
+		});
 		await expect(
 			redemptionContract.connect(doorStaff).doorStaffRedeem(2, buyer.address, { value: utils.parseEther('1') })
 		).to.be.revertedWith('Door Mint: Door staff mint is not active');
 	});
 
 	it('Should activate door staff redeem and redeem tokens for buyer', async function () {
-		const now = new Date(new Date().getTime() + 49 * 60 * 60 * 1000);
+		const now = new Date(new Date().getTime() + 49 * 3600 * 1000);
+		console.log('now: %s', now);
 		const start = (now.getTime() / 1000).toFixed(0);
-		const end = (now.setHours(now.getHours() + 72) / 1000).toFixed(0);
+		console.log('start: %s', start);
+		const end = (now.setSeconds(now.getSeconds() + 3600 * 72) / 1000).toFixed(0);
+		console.log('end: %s', end);
 		redemptionContract = await redemptionFactory.deploy(start, end, merkleTree.root);
 		await redemptionContract.deployed();
 		await network.provider.request({
