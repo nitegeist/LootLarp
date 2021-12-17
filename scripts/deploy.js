@@ -5,7 +5,7 @@ async function main() {
 	console.log('Account balance:', (await deployer.getBalance()).toString());
 
 	const redemptionFactory = await ethers.getContractFactory('Redemption');
-	const redemptionContract = await redemptionFactory.deploy(0, 0, 0);
+	const redemptionContract = await redemptionFactory.deploy();
 	await redemptionContract.deployed();
 
 	console.log('Redemption address:', redemptionContract.address);

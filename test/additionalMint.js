@@ -28,7 +28,7 @@ describe('Additional Mint', function () {
 		claimedTokenMerkleTree.leaves = Object.entries(tokens).map((token) => hashToken(...token));
 		claimedTokenMerkleTree.tree = new MerkleTree(claimedTokenMerkleTree.leaves, keccak256, { sort: true });
 		claimedTokenMerkleTree.root = claimedTokenMerkleTree.tree.getHexRoot();
-		redemptionContract = await redemptionFactory.deploy(0, 0, preferredMinterMerkleTree.root);
+		redemptionContract = await redemptionFactory.deploy(preferredMinterMerkleTree.root);
 		await redemptionContract.deployed();
 		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
 	});
@@ -59,7 +59,7 @@ describe('Additional Mint', function () {
 	});
 
 	it('Should revert with private mint active', async function () {
-		redemptionContract = await redemptionFactory.deploy(0, 0, preferredMinterMerkleTree.root);
+		redemptionContract = await redemptionFactory.deploy(preferredMinterMerkleTree.root);
 		await redemptionContract.deployed();
 		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
 		await expect(
@@ -68,16 +68,14 @@ describe('Additional Mint', function () {
 	});
 
 	it('Should revert with door staff mint active', async function () {
-		const now = new Date(new Date().getTime() + 49 * 3600 * 1000);
-		const start = (now.getTime() / 1000).toFixed(0);
-		const end = (now.setSeconds(now.getSeconds() + 3600 * 72) / 1000).toFixed(0);
-		redemptionContract = await redemptionFactory.deploy(start, end, preferredMinterMerkleTree.root);
+		redemptionContract = await redemptionFactory.deploy(preferredMinterMerkleTree.root);
 		await redemptionContract.deployed();
 		await network.provider.request({
 			method: 'evm_increaseTime',
 			params: [3600 * 49],
 		});
 		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
+		await redemptionContract.connect(owner).toggleDoorStaffRedeem();
 		await expect(
 			redemptionContract.connect(buyer).additionalMint(2, { value: utils.parseEther('1') })
 		).to.be.revertedWith('Additional Mint: Door staff mint is active');

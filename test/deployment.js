@@ -16,7 +16,7 @@ describe('Deployment', function () {
 		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
 		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
 		merkleTree.root = merkleTree.tree.getHexRoot();
-		redemptionContract = await redemptionFactory.deploy(0, 0, merkleTree.root);
+		redemptionContract = await redemptionFactory.deploy(merkleTree.root);
 		await redemptionContract.deployed();
 	});
 

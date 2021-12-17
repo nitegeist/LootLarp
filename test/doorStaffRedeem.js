@@ -17,33 +17,27 @@ describe('Door Staff Redeem', function () {
 		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
 		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
 		merkleTree.root = merkleTree.tree.getHexRoot();
-		redemptionContract = await redemptionFactory.deploy(0, 0, merkleTree.root);
+		redemptionContract = await redemptionFactory.deploy(merkleTree.root);
 		await redemptionContract.deployed();
-	});
-
-	it('Should revert with door staff redeem not active', async function () {
 		await network.provider.request({
 			method: 'evm_increaseTime',
 			params: [3600 * 49],
 		});
+	});
+
+	it('Should toggle door staff redeem', async function () {
+		await redemptionContract.connect(owner).toggleDoorStaffRedeem();
+		expect(await redemptionContract.doorRedeem()).to.be.true;
+	});
+
+	it('Should revert with door staff redeem not active', async function () {
 		await expect(
 			redemptionContract.connect(doorStaff).doorStaffRedeem(2, buyer.address, { value: utils.parseEther('1') })
 		).to.be.revertedWith('Door Mint: Door staff mint is not active');
 	});
 
 	it('Should activate door staff redeem and redeem tokens for buyer', async function () {
-		const now = new Date(new Date().getTime() + 49 * 3600 * 1000);
-		console.log('now: %s', now);
-		const start = (now.getTime() / 1000).toFixed(0);
-		console.log('start: %s', start);
-		const end = (now.setSeconds(now.getSeconds() + 3600 * 72) / 1000).toFixed(0);
-		console.log('end: %s', end);
-		redemptionContract = await redemptionFactory.deploy(start, end, merkleTree.root);
-		await redemptionContract.deployed();
-		await network.provider.request({
-			method: 'evm_increaseTime',
-			params: [3600 * 49],
-		});
+		await redemptionContract.connect(owner).toggleDoorStaffRedeem();
 		await redemptionContract.grantRole(redemptionContract.MINTER_ROLE(), doorStaff.address);
 		await redemptionContract.connect(buyer).payDoorStaff(2, { value: utils.parseEther('1') });
 		await redemptionContract.connect(doorStaff).doorStaffRedeem(2, buyer.address, { value: utils.parseEther('1') });
@@ -56,7 +50,7 @@ describe('Door Staff Redeem', function () {
 		expect(
 			await redemptionContract
 				.connect(doorStaff)
-				.refundDoorStaffPayment(buyer.address, { value: utils.parseEther('0.5') })
+				.refundDoorStaffPayment(buyer.address, { value: utils.parseEther('1') })
 		).to.be.ok;
 	});
 });

@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
-import "hardhat/console.sol";
 
 /**
  * @title ERC721 Smart Contract for LootLARP
@@ -55,26 +54,21 @@ contract Redemption is
     uint256 startTime;
     uint256 endTime;
 
-    // Door staff redeem
-    uint256 startTimeDoorStaff;
-    uint256 endTimeDoorStaff;
-
     // public claim boolean
     bool public publicClaim;
+
+    // door staff mint boolean
+    bool public doorRedeem;
 
     // initializer
     bool public initialized;
 
-    constructor(
-        uint256 _startTimeDoorStaff,
-        uint256 _endTimeDoorStaff,
-        bytes32 _prefferedMinterRoot
-    ) ERC721PresetMinterPauserAutoId("Redemption", "RDMN", BASE_URI) {
+    constructor(bytes32 _prefferedMinterRoot)
+        ERC721PresetMinterPauserAutoId("Redemption", "RDMN", BASE_URI)
+    {
         prefferedMinterRoot = _prefferedMinterRoot;
         startTime = block.timestamp;
         endTime = block.timestamp + 2 days;
-        startTimeDoorStaff = _startTimeDoorStaff;
-        endTimeDoorStaff = _endTimeDoorStaff;
     }
 
     function transferAdmin(address _account) external {
@@ -245,6 +239,16 @@ contract Redemption is
         publicClaim = !publicClaim;
     }
 
+    // Toggle door staff redeem
+    function toggleDoorStaffRedeem() external {
+        require(
+            hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
+            "Must have admin role to toggle door staff redeem"
+        );
+        require(block.timestamp > endTime, "Private claim has not ended");
+        doorRedeem = !doorRedeem;
+    }
+
     // Gets listing price
     function getListingPrice() external view returns (uint256) {
         return listingPrice;
@@ -297,13 +301,7 @@ contract Redemption is
             block.timestamp > endTime,
             "Additional Mint: Private mint is active"
         );
-        // console.log(block.timestamp > endTimeDoorStaff);
-        // console.log(block.timestamp);
-        // console.log(endTimeDoorStaff);
-        require(
-            block.timestamp > endTimeDoorStaff,
-            "Additional Mint: Door staff mint is active"
-        );
+        require(!doorRedeem, "Additional Mint: Door staff mint is active");
         require(
             listingPrice * _amount == msg.value,
             "Additional Mint: Incorrect payment amount"
@@ -407,16 +405,8 @@ contract Redemption is
         payable
         nonReentrant
     {
-        // console.log(block.timestamp > startTimeDoorStaff);
-        // console.log(block.timestamp < endTimeDoorStaff);
-        // console.log(block.timestamp);
-        // console.log(endTimeDoorStaff);
         require(block.timestamp > endTime, "Door Mint: Private mint is active");
-        require(
-            block.timestamp > startTimeDoorStaff &&
-                block.timestamp < endTimeDoorStaff,
-            "Door Mint: Door staff mint is not active"
-        );
+        require(doorRedeem, "Door Mint: Door staff mint is not active");
         require(
             hasRole(MINTER_ROLE, _msgSender()),
             "Door Mint: Must have minter role to mint"

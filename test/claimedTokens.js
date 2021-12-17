@@ -29,7 +29,7 @@ describe('Claimed Tokens', function () {
 		claimedTokenMerkleTree.leaves = Object.entries(tokens).map((token) => hashToken(...token));
 		claimedTokenMerkleTree.tree = new MerkleTree(claimedTokenMerkleTree.leaves, keccak256, { sort: true });
 		claimedTokenMerkleTree.root = claimedTokenMerkleTree.tree.getHexRoot();
-		redemptionContract = await redemptionFactory.deploy(0, 0, preferredMinterMerkleTree.root);
+		redemptionContract = await redemptionFactory.deploy(preferredMinterMerkleTree.root);
 		await redemptionContract.deployed();
 		await network.provider.request({
 			method: 'evm_increaseTime',
@@ -40,7 +40,7 @@ describe('Claimed Tokens', function () {
 	});
 
 	it('Should not allow an account that is not admin to set the root', async function () {
-		redemptionContract = await redemptionFactory.deploy(0, 0, preferredMinterMerkleTree.root);
+		redemptionContract = await redemptionFactory.deploy(preferredMinterMerkleTree.root);
 		await redemptionContract.deployed();
 		await expect(redemptionContract.connect(buyer).initialize(claimedTokenMerkleTree.root)).to.be.revertedWith(
 			'Must be an admin'
