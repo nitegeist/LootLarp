@@ -7,6 +7,7 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/IERC721Metadata.sol";
 import "@openzeppelin/contracts/token/ERC721/extensions/ERC721URIStorage.sol";
 import "@openzeppelin/contracts/token/ERC721/presets/ERC721PresetMinterPauserAutoId.sol";
+import "hardhat/console.sol";
 
 /**
  * @title ERC721 Smart Contract for LootLARP
@@ -252,6 +253,11 @@ contract Redemption is
     // Gets listing price
     function getListingPrice() external view returns (uint256) {
         return listingPrice;
+    }
+
+    // Get total minted
+    function getTotalMinted() external view returns (uint256) {
+        return _totalMinted.current();
     }
 
     // Get available supply
