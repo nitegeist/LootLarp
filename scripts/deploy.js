@@ -1,9 +1,9 @@
-const { network, run, ethers } = require("hardhat");
+const { network, run, ethers } = require('hardhat');
 
 async function main() {
 	const [deployer] = await ethers.getSigners();
 
-	console.log("Deploying onto network:", network.name);
+	console.log('Deploying onto network:', network.name);
 	console.log('Deploying the contracts with the account:', await deployer.getAddress());
 	console.log('Account balance:', (await deployer.getBalance()).toString());
 
@@ -12,29 +12,22 @@ async function main() {
 	await redemptionContract.deployed();
 
 	console.log('Redemption address:', redemptionContract.address);
-	
-	console.log("Verifying on etherscan...");
-	if (network.name != "hardhat") {
-		await run("verify", {
+
+	console.log('Verifying on etherscan...');
+	if (network.name != 'hardhat') {
+		await run('verify', {
 			address: redemptionContract.address,
-			constructorArgParams: [
-				0,
-				0,
-				0,
-			],
+			constructorArgParams: [0],
 		});
-		console.log("Verified :D");
+		console.log('Verified :D');
 	}
 
 	// We also save the contract's artifacts and address in the frontend directory
 	const deploymentInfo = {
 		network: network.name,
-		"Redemption Contract Address": redemptionContract.address,
-	}
-	fs.writeFileSync(
-		`deployments/script-${network.name}.json`,
-		JSON.stringify(deploymentInfo)
-	);
+		'Redemption Contract Address': redemptionContract.address,
+	};
+	fs.writeFileSync(`deployments/script-${network.name}.json`, JSON.stringify(deploymentInfo));
 
 	console.log(`Latest contract address written to: deployments/script=${network.name}.json`);
 }
