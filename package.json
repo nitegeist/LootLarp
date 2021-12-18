@@ -1,7 +1,7 @@
 {
-  "name": "hardhat-hackathon-boilerplate",
+  "name": "lootlarp",
   "version": "1.0.0",
-  "description": "A boilerplate repository to get you started with Hardhat and Ethereum development",
+  "description": "LootLARP NFT repository",
   "directories": {
     "test": "test"
   },
@@ -10,14 +10,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/nomiclabs/hardhat-hackathon-boilerplate.git"
+    "url": "git+https://github.com/nitegeist/lootlarp"
   },
   "keywords": [
-    "hardhat",
+    "nft",
     "ethereum",
-    "hackathon"
+    "solidity"
   ],
-  "author": "Nomic Labs",
+  "author": "@niteGeist + @carlfarterson",
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/nomiclabs/hardhat-hackathon-boilerplate/issues"
@@ -35,5 +35,11 @@
   },
   "dependencies": {
     "@openzeppelin/contracts": "^4.3.3"
+=======
+    "@nomiclabs/hardhat-etherscan": "^2.1.8",
+    "@openzeppelin/contracts": "^4.3.3",
+    "dotenv": "^10.0.0",
+    "hardhat-abi-exporter": "^2.3.1"
+>>>>>>> Stashed changes
   }
 }

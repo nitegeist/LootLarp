@@ -18,6 +18,14 @@ describe('Door Staff Redeem', function () {
 		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
 		merkleTree.root = merkleTree.tree.getHexRoot();
 		redemptionContract = await redemptionFactory.deploy(merkleTree.root);
+=======
+
+		const now = new Date(new Date().getTime() + 48 * 60 * 60 * 1000);
+		const start = (now.getTime() / 1000).toFixed(0);
+		const end = (now.setHours(now.getHours() + 72) / 1000).toFixed(0);
+
+		redemptionContract = await redemptionFactory.deploy(start, end, merkleTree.root);
+>>>>>>> Stashed changes
 		await redemptionContract.deployed();
 		await network.provider.request({
 			method: 'evm_increaseTime',
@@ -41,6 +49,17 @@ describe('Door Staff Redeem', function () {
 		await redemptionContract.grantRole(redemptionContract.MINTER_ROLE(), doorStaff.address);
 		await redemptionContract.connect(buyer).payDoorStaff(2, { value: utils.parseEther('1') });
 		await redemptionContract.connect(doorStaff).doorStaffRedeem(2, buyer.address, { value: utils.parseEther('1') });
+=======
+	it('Should activate door staff redeem and redeem tokens for buyer', async function () {
+		await network.provider.request({
+			method: 'evm_increaseTime',
+			params: [3600 * 49],
+		});
+		await redemptionContract.connect(owner).initialize(merkleTree.root);
+		await redemptionContract.grantRole(redemptionContract.MINTER_ROLE(), doorStaff.address);
+		await redemptionContract.connect(buyer).payDoorStaff(2, { value: utils.parseEther('1') });
+		await redemptionContract.connect(doorStaff).doorStaffRedeem(2, buyer.address, { value: utils.parseEther('1') });
+>>>>>>> Stashed changes
 		expect(await redemptionContract.balanceOf(buyer.address)).to.equal(2);
 	});
 
