@@ -7,6 +7,7 @@ const { utils } = require('ethers');
 describe('Deployment', function () {
 	let owner, buyer, accounts;
 	let redemptionFactory, redemptionContract;
+	let maxAvailableSupply = 500;
 	let maxSupply = 508;
 	const merkleTree = {};
 
@@ -23,7 +24,8 @@ describe('Deployment', function () {
 	it('Successfully deploys contract', async function () {
 		expect(await redemptionContract.publicClaim()).to.be.false;
 		expect(await redemptionContract.getListingPrice()).to.equal(ethers.utils.parseEther('0.5'));
-		expect(await redemptionContract.getAvailableSupply()).to.equal(maxSupply);
+		expect(await redemptionContract.getAvailableSupply()).to.equal(maxAvailableSupply);
+		expect(await redemptionContract.getMaxSupply()).to.equal(maxSupply);
 	});
 
 	it('Should revert with not an admin', async function () {

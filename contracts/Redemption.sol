@@ -262,7 +262,7 @@ contract Redemption is
 
     // Get available supply
     function getAvailableSupply() external view returns (uint256) {
-        return maxSupply - _totalMinted.current();
+        return (maxSupply - TOTAL_LEGENDARY_TOKENS) - _totalMinted.current();
     }
 
     // Sets listing price in wei
