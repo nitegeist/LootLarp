@@ -14,10 +14,10 @@ describe('Deployment', function () {
 	beforeEach(async function () {
 		redemptionFactory = await hre.ethers.getContractFactory('Redemption');
 		[owner, buyer, ...accounts] = await ethers.getSigners();
-		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
-		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
-		merkleTree.root = merkleTree.tree.getHexRoot();
-		redemptionContract = await redemptionFactory.deploy(merkleTree.root);
+		// merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
+		// merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
+		// merkleTree.root = merkleTree.tree.getHexRoot();
+		redemptionContract = await redemptionFactory.deploy();
 		await redemptionContract.deployed();
 	});
 

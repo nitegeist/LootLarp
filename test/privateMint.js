@@ -18,12 +18,13 @@ describe('Private Mint', function () {
 		merkleTree.leaves = accounts.map((account) => bufferToHex(utils.solidityKeccak256(['address'], [account.address])));
 		merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
 		merkleTree.root = merkleTree.tree.getHexRoot();
-		redemptionContract = await redemptionFactory.deploy(merkleTree.root);
+		redemptionContract = await redemptionFactory.deploy();
 		await redemptionContract.deployed();
 		await redemptionContract.batchGrantPreferredMinterRole(addresses);
 	});
 
 	it('Should revert with private mint not active', async function () {
+		await redemptionContract.connect(owner).initializeMint(merkleTree.root);
 		await network.provider.request({
 			method: 'evm_increaseTime',
 			params: [3600 * 49],
@@ -36,6 +37,7 @@ describe('Private Mint', function () {
 	});
 
 	it('Should activate private mint and mint tokens for address', async function () {
+		await redemptionContract.connect(owner).initializeMint(merkleTree.root);
 		const leaf = bufferToHex(utils.solidityKeccak256(['address'], [accounts[0].address]));
 		const proof = merkleTree.tree.getHexProof(leaf);
 		await redemptionContract.connect(accounts[0]).privateMint(2, proof, { value: utils.parseEther('1') });

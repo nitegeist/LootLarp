@@ -28,9 +28,10 @@ describe('Additional Mint', function () {
 		claimedTokenMerkleTree.leaves = Object.entries(tokens).map((token) => hashToken(...token));
 		claimedTokenMerkleTree.tree = new MerkleTree(claimedTokenMerkleTree.leaves, keccak256, { sort: true });
 		claimedTokenMerkleTree.root = claimedTokenMerkleTree.tree.getHexRoot();
-		redemptionContract = await redemptionFactory.deploy(preferredMinterMerkleTree.root);
+		redemptionContract = await redemptionFactory.deploy();
 		await redemptionContract.deployed();
-		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
+		await redemptionContract.connect(owner).initializeClaim(claimedTokenMerkleTree.root);
+		await redemptionContract.connect(owner).initializeMint(preferredMinterMerkleTree.root);
 	});
 
 	it('Should revert with not an admin', async function () {
@@ -59,22 +60,24 @@ describe('Additional Mint', function () {
 	});
 
 	it('Should revert with private mint active', async function () {
-		redemptionContract = await redemptionFactory.deploy(preferredMinterMerkleTree.root);
+		redemptionContract = await redemptionFactory.deploy();
 		await redemptionContract.deployed();
-		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
+		await redemptionContract.connect(owner).initializeMint(preferredMinterMerkleTree.root);
+		await redemptionContract.connect(owner).initializeClaim(claimedTokenMerkleTree.root);
 		await expect(
 			redemptionContract.connect(buyer).additionalMint(2, { value: utils.parseEther('1') })
 		).to.be.revertedWith('Additional Mint: Private mint is active');
 	});
 
 	it('Should revert with door staff mint active', async function () {
-		redemptionContract = await redemptionFactory.deploy(preferredMinterMerkleTree.root);
+		redemptionContract = await redemptionFactory.deploy();
 		await redemptionContract.deployed();
+		await redemptionContract.connect(owner).initializeMint(preferredMinterMerkleTree.root);
 		await network.provider.request({
 			method: 'evm_increaseTime',
 			params: [3600 * 49],
 		});
-		await redemptionContract.connect(owner).initialize(claimedTokenMerkleTree.root);
+		await redemptionContract.connect(owner).initializeClaim(claimedTokenMerkleTree.root);
 		await redemptionContract.connect(owner).toggleDoorStaffRedeem();
 		await expect(
 			redemptionContract.connect(buyer).additionalMint(2, { value: utils.parseEther('1') })

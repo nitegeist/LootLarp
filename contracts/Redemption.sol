@@ -23,7 +23,7 @@ contract Redemption is
     using Strings for uint256;
     using MerkleProof for bytes32[];
     using Counters for Counters.Counter;
-    bytes32 public immutable prefferedMinterRoot;
+    bytes32 public prefferedMinterRoot;
     bytes32 public claimedTokensRoot;
     bytes32 public constant PREFERRED_MINTER_ROLE =
         keccak256("PREFERRED_MINTER_ROLE");
@@ -61,16 +61,13 @@ contract Redemption is
     // door staff mint boolean
     bool public doorRedeem;
 
-    // initializer
-    bool public initialized;
+    // initializers
+    bool public claimInitialized;
+    bool public mintInitialized;
 
-    constructor(bytes32 _prefferedMinterRoot)
+    constructor()
         ERC721PresetMinterPauserAutoId("Redemption", "RDMN", BASE_URI)
-    {
-        prefferedMinterRoot = _prefferedMinterRoot;
-        startTime = block.timestamp;
-        endTime = block.timestamp + 2 days;
-    }
+    {}
 
     function transferAdmin(address _account) external {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Not an admin");
@@ -78,11 +75,20 @@ contract Redemption is
         revokeRole(DEFAULT_ADMIN_ROLE, _msgSender());
     }
 
-    function initialize(bytes32 _root) external {
+    function initializeClaim(bytes32 _root) external {
         require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
-        require(!initialized, "Already initialized");
-        initialized = true;
+        require(!claimInitialized, "Already initialized");
+        claimInitialized = true;
         claimedTokensRoot = _root;
+    }
+
+    function initializeMint(bytes32 _root) external {
+        require(hasRole(DEFAULT_ADMIN_ROLE, _msgSender()), "Must be an admin");
+        require(!mintInitialized, "Already initialized");
+        mintInitialized = true;
+        prefferedMinterRoot = _root;
+        startTime = block.timestamp;
+        endTime = block.timestamp + 2 days;
     }
 
     // Returns baseURI
@@ -160,7 +166,7 @@ contract Redemption is
         uint256 _tokenId,
         address _account
     ) public view returns (bool) {
-        require(initialized, "!initialized");
+        require(claimInitialized, "!initialized");
         return
             MerkleProof.verify(
                 merkleProof,
@@ -177,7 +183,7 @@ contract Redemption is
         uint256 _lootId2,
         bytes32[] calldata merkleProof2
     ) external {
-        require(initialized, "!initialized");
+        require(claimInitialized, "!initialized");
         require(_tokenId1 != _tokenId2, "Token ID args cannot be the same");
         require(_lootId1 != _lootId2, "Loot args cannot be the same");
 
@@ -221,7 +227,7 @@ contract Redemption is
         view
         returns (Claim memory item1, Claim memory item2)
     {
-        require(initialized, "!initialized");
+        require(claimInitialized, "!initialized");
         require(
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "Must have admin role to view claims"
@@ -236,6 +242,7 @@ contract Redemption is
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "Must have admin role to toggle public claim"
         );
+        require(mintInitialized, "!initialized");
         require(block.timestamp > endTime, "Private claim has not ended");
         publicClaim = !publicClaim;
     }
@@ -246,6 +253,7 @@ contract Redemption is
             hasRole(DEFAULT_ADMIN_ROLE, _msgSender()),
             "Must have admin role to toggle door staff redeem"
         );
+        require(mintInitialized, "!initialized");
         require(block.timestamp > endTime, "Private claim has not ended");
         doorRedeem = !doorRedeem;
     }
@@ -302,6 +310,7 @@ contract Redemption is
 
     // Additional token mint
     function additionalMint(uint256 _amount) external payable nonReentrant {
+        require(mintInitialized, "!initialized");
         require(!publicClaim, "Public mint is active");
         require(
             block.timestamp > endTime,
@@ -368,6 +377,7 @@ contract Redemption is
         payable
         nonReentrant
     {
+        require(mintInitialized, "!initialized");
         require(
             block.timestamp > startTime && block.timestamp < endTime,
             "Private Mint: Private mint is not active"
@@ -411,6 +421,7 @@ contract Redemption is
         payable
         nonReentrant
     {
+        require(mintInitialized, "!initialized");
         require(block.timestamp > endTime, "Door Mint: Private mint is active");
         require(doorRedeem, "Door Mint: Door staff mint is not active");
         require(
