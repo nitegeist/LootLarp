@@ -421,8 +421,6 @@ contract Redemption is
         payable
         nonReentrant
     {
-        require(mintInitialized, "!initialized");
-        require(block.timestamp > endTime, "Door Mint: Private mint is active");
         require(doorRedeem, "Door Mint: Door staff mint is not active");
         require(
             hasRole(MINTER_ROLE, _msgSender()),
