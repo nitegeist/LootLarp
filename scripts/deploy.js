@@ -30,14 +30,14 @@ async function main() {
 		console.log('Verified :D');
 	}
 
-	// We also save the contract's artifacts and address in the frontend directory
-	const deploymentInfo = {
-		network: network.name,
-		'Redemption Contract Address': redemptionContract.address,
-	};
-	fs.writeFileSync(`deployments/script-${network.name}.json`, JSON.stringify(deploymentInfo));
+	// // We also save the contract's artifacts and address in the frontend directory
+	// const deploymentInfo = {
+	// 	network: network.name,
+	// 	'Redemption Contract Address': redemptionContract.address,
+	// };
+	// fs.writeFileSync(`deployments/script-${network.name}.json`, JSON.stringify(deploymentInfo));
 
-	console.log(`Latest contract address written to: deployments/script=${network.name}.json`);
+	// console.log(`Latest contract address written to: deployments/script=${network.name}.json`);
 }
 
 // function saveFrontendFiles(token) {
