@@ -5,18 +5,18 @@ const { utils } = require('ethers');
 
 async function main() {
 	const [deployer] = await ethers.getSigners();
-	const addresses = ['0x2410D50Ba4993c1FE13B3DB0BcDaE51B1c617d0a', '0x00000000005dbcB0d0513FcDa746382Fe8a53468'];
+	// const addresses = ['0x2410D50Ba4993c1FE13B3DB0BcDaE51B1c617d0a', '0x00000000005dbcB0d0513FcDa746382Fe8a53468'];
 	console.log('Accounts: ', addresses);
 	console.log('Deploying onto network:', network.name);
 	console.log('Deploying the contracts with the account:', await deployer.getAddress());
 	console.log('Account balance:', (await deployer.getBalance()).toString());
 
-	const merkleTree = {};
-	merkleTree.leaves = addresses.map((address) => bufferToHex(utils.solidityKeccak256(['address'], [address])));
-	merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
-	merkleTree.root = merkleTree.tree.getHexRoot();
+	// const merkleTree = {};
+	// merkleTree.leaves = addresses.map((address) => bufferToHex(utils.solidityKeccak256(['address'], [address])));
+	// merkleTree.tree = new MerkleTree(merkleTree.leaves, keccak256, { sort: true });
+	// merkleTree.root = merkleTree.tree.getHexRoot();
 	const redemptionFactory = await ethers.getContractFactory('Redemption');
-	const redemptionContract = await redemptionFactory.deploy(merkleTree.root);
+	const redemptionContract = await redemptionFactory.deploy();
 	await redemptionContract.deployed();
 
 	console.log('Redemption address:', redemptionContract.address);
