@@ -25,7 +25,7 @@ async function main() {
 	if (network.name != 'hardhat') {
 		await run('verify', {
 			address: redemptionContract.address,
-			constructorArgParams: [merkleTree.root],
+			constructorArgParams: [],
 		});
 		console.log('Verified :D');
 	}
