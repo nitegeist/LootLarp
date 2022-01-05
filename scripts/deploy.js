@@ -6,7 +6,7 @@ const { utils } = require('ethers');
 async function main() {
 	const [deployer] = await ethers.getSigners();
 	// const addresses = ['0x2410D50Ba4993c1FE13B3DB0BcDaE51B1c617d0a', '0x00000000005dbcB0d0513FcDa746382Fe8a53468'];
-	console.log('Accounts: ', addresses);
+	// console.log('Accounts: ', addresses);
 	console.log('Deploying onto network:', network.name);
 	console.log('Deploying the contracts with the account:', await deployer.getAddress());
 	console.log('Account balance:', (await deployer.getBalance()).toString());
